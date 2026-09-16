@@ -15,14 +15,20 @@ Copy `.env.example` to `.env` for local secrets. `.env` is gitignored — never 
 CI runs these on every pull request. Run them locally before opening a PR:
 
 ```bash
-python -m pip install --upgrade pip wheel
-python -m pip install --upgrade "setuptools>=83"   # Python 3.10+; skip on 3.9
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .                 # runtime deps only
+pip freeze --exclude-editable > requirements-audit.txt
+deactivate
+python -m pip install pip-audit  # outside the project venv
+python -m pip_audit --disable-pip --no-deps -r requirements-audit.txt
+source .venv/bin/activate
+pip install -e ".[test]"
 ruff check src tests
-pytest                 # mocked; live marker excluded
-pip-audit --skip-editable
+pytest                           # mocked; live marker excluded
 ```
 
-Run `pip-audit` inside the same virtualenv. A system Python may report unrelated packages. On Python 3.9, `pip-audit` may report PYSEC-2026-3447 in setuptools; that advisory is fixed in setuptools 83, which requires Python 3.10+. Do not weaken or skip these checks to land a change.
+Audit the **runtime** freeze from `pip install -e .`, not the Actions interpreter, pip, setuptools, or pip-audit's own packages. Do not weaken or skip these checks to land a change.
 
 ## Client defaults
 

@@ -110,13 +110,12 @@ This package follows [Semantic Versioning](https://semver.org/). `0.1.0` is the 
 
 ## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the venv-scoped runtime `pip-audit` command. Local unit tests:
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[test]"
 ruff check src tests
 pytest          # mocked unit tests; live marker is excluded by default
-pip-audit --skip-editable
 ```
 
 Unit tests use **respx** mocks — no secrets and no production calls. The default pytest config excludes the `live` marker (`addopts = -m "not live"`), so CI stays mocked.
