@@ -2,28 +2,25 @@
 
 Quickstart::
 
-    import os
     from posiverse import PosiverseClient
 
     # API key via env POSIVERSE_API_KEY (or pass api_key=...)
+    # Default base URL is production. Staff/bots may set POSIVERSE_BASE_URL.
     with PosiverseClient() as client:
         page = client.devices.list()
         for device in page.items:
             print(device.id, device.name)
-
-Default base URL is the test server
-(``https://openapi-test.posiverse.com``). Production is available as
-``PROD_BASE_URL`` but live tests must never target production.
 """
 
 from posiverse._version import __version__
-from posiverse.client import (
+from posiverse.client import HttpBody, PosiverseClient
+from posiverse.config import (
     API_KEY_ENV,
     AUTH_HEADER,
+    BASE_URL_ENV,
     DEFAULT_BASE_URL,
     PROD_BASE_URL,
-    TEST_BASE_URL,
-    PosiverseClient,
+    PosiverseConfig,
 )
 from posiverse.errors import (
     APIError,
@@ -38,9 +35,10 @@ from posiverse.pagination import PaginatedResponse
 __all__ = [
     "API_KEY_ENV",
     "AUTH_HEADER",
+    "BASE_URL_ENV",
     "DEFAULT_BASE_URL",
+    "HttpBody",
     "PROD_BASE_URL",
-    "TEST_BASE_URL",
     "APIError",
     "AuthenticationError",
     "BadRequestError",
@@ -48,6 +46,7 @@ __all__ = [
     "NotFoundError",
     "PaginatedResponse",
     "PosiverseClient",
+    "PosiverseConfig",
     "RateLimitError",
     "__version__",
 ]

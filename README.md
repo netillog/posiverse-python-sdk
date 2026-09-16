@@ -1,15 +1,21 @@
 # posiverse-python-sdk
 
-Production Python SDK for the [Posiverse](https://www.positioninguniversal.com) OpenAPI (v1.1.1).
+Python SDK for the [Posiverse](https://www.positioninguniversal.com) OpenAPI (v1.1.1).
 
 Built with **httpx** and **pydantic v2**. Covers all OpenAPI tags: Commands, Devices, Firmwares, Groups, Logs, Products, Settings, TagMaps, Tags, Tenants, Users, VirtualConsole.
 
 The OpenAPI document checked into this repository (`openapi/posiverse.openapi.json`) is the source of truth. The SDK does not invent endpoints beyond that spec.
 
-## Install
+Install from PyPI:
 
 ```bash
-pip install -e ".[dev]"   # from a checkout
+pip install posiverse
+```
+
+From a checkout:
+
+```bash
+pip install -e ".[dev]"
 ```
 
 ## Authentication
@@ -22,33 +28,33 @@ Set the key via environment variable (recommended):
 export POSIVERSE_API_KEY="your-api-key"
 ```
 
-Use a separate key for test vs production backends. Keys are available in the Posiverse UI under User Profile.
+Use a separate key for test vs production backends. Keys are available in the Posiverse UI under User Profile. Never commit API keys or paste them into logs.
 
 ## Servers
 
-| Environment | Base URL |
-|-------------|----------|
-| **Test (default)** | `https://openapi-test.posiverse.com` |
-| Production | `https://openapi-prod.posiverse.com` |
-
-The client defaults to the **test** server to avoid accidental production traffic.
+The client defaults to **production**: `https://openapi-prod.posiverse.com`.
 
 ```python
-from posiverse import PosiverseClient, TEST_BASE_URL, PROD_BASE_URL
+from posiverse import PosiverseClient
 
-with PosiverseClient() as client:          # TEST_BASE_URL
+with PosiverseClient() as client:  # production, POSIVERSE_API_KEY from the environment
     ...
-
-# Explicit production URL (do not use in automated tests)
-# client = PosiverseClient(base_url=PROD_BASE_URL)
 ```
+
+Staff and bots that need a non-production OpenAPI host should set `POSIVERSE_BASE_URL` to their internal test OpenAPI base URL (https only), or pass `base_url=` to the client. The published package does not embed a test hostname.
+
+```bash
+export POSIVERSE_BASE_URL="https://your-internal-test-openapi.example"
+```
+
+HTTP URLs are rejected. TLS verification and request timeouts are on by default and cannot be turned off through the client constructor.
 
 ## Quickstart
 
 ```python
 from posiverse import PosiverseClient
 
-# Uses POSIVERSE_API_KEY and defaults to the test server
+# Uses POSIVERSE_API_KEY and defaults to production
 with PosiverseClient() as client:
     page = client.devices.list()
     print(page.total_count, page.page_count, page.page_start, page.next_page_url)
@@ -98,38 +104,45 @@ Walk pages with `client.follow_next_page(page, item_model)` or `client.iter_page
 | `client.users` | Users | list / get / update |
 | `client.virtual_console` | VirtualConsole | `get_output` / `send` |
 
+## Versioning
+
+This package follows [Semantic Versioning](https://semver.org/). `0.1.0` is the first public PyPI release. While the major version is `0`, minor bumps may include breaking changes; patch bumps are bug fixes. `1.0.0` will mark a stable public API. See [RELEASE.md](RELEASE.md) for the publish checklist.
+
 ## Development
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the venv-scoped runtime `pip-audit` command. Local unit tests:
+
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[test]"
 ruff check src tests
 pytest          # mocked unit tests; live marker is excluded by default
 ```
 
-Unit tests use **respx** mocks against the test base URL only — no secrets and no production calls. The default pytest config excludes the `live` marker (`addopts = -m "not live"`), so CI stays mocked.
+Unit tests use **respx** mocks — no secrets and no production calls. The default pytest config excludes the `live` marker (`addopts = -m "not live"`), so CI stays mocked.
 
-### Live smoke / integration (TEST API only)
+### Live smoke / integration
 
-Live tests always target **`https://openapi-test.posiverse.com`** and refuse production. Never set a production base URL in these suites.
+Live tests are env-gated and **never default to production**. They require `POSIVERSE_BASE_URL` (your internal test OpenAPI base URL) and refuse the production host.
 
 | Flag | Purpose |
 |------|---------|
 | `POSIVERSE_LIVE_SMOKE=1` | Enable the minimal smoke test in `tests/test_live_smoke.py` |
 | `POSIVERSE_LIVE_INTEGRATION=1` | Enable the full per-tag suite under `tests/integration/` (also enables smoke) |
 | `POSIVERSE_API_KEY` | Required for any live run (sent as `posiverse-auth-key`) |
+| `POSIVERSE_BASE_URL` | Required for any live run; https only; production is refused |
 
 ```bash
 # Mocked unit tests (default CI)
 pytest
 
-# Full live integration against TEST only
-POSIVERSE_LIVE_INTEGRATION=1 POSIVERSE_API_KEY=... pytest -m live -v --tb=short
+# Full live integration against an internal test OpenAPI
+POSIVERSE_LIVE_INTEGRATION=1 POSIVERSE_API_KEY=... POSIVERSE_BASE_URL=... pytest -m live -v --tb=short
 
 # Smoke only
-POSIVERSE_LIVE_SMOKE=1 POSIVERSE_API_KEY=... pytest -m live tests/test_live_smoke.py
+POSIVERSE_LIVE_SMOKE=1 POSIVERSE_API_KEY=... POSIVERSE_BASE_URL=... pytest -m live tests/test_live_smoke.py
 ```
 
-Settings write coverage uses the known TEST device and constraints from `tests/integration/fixtures/Release.json` (mask keys: ver, config, analytics, telemetry, ota, motion, vehicle, driverBehavior, driverId, bluetooth). Prior values are restored when practical. Irreversible deletes (tenants/users/devices) and destructive device commands (for example `reset`) are skipped.
+Settings write coverage uses the known test device and constraints from `tests/integration/fixtures/Release.json` (mask keys: ver, config, analytics, telemetry, ota, motion, vehicle, driverBehavior, driverId, bluetooth). Prior values are restored when practical. Irreversible deletes (tenants/users/devices) and destructive device commands (for example `reset`) are skipped.
 
 OpenAPI source of truth: `openapi/posiverse.openapi.json`.
 

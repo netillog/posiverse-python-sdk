@@ -6,10 +6,14 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.9", "3.11", "3.12"]
 
@@ -21,13 +25,49 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install package and dev dependencies
+      - name: Create project virtualenv
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          python -m venv .venv
+          .venv/bin/python -m pip install -U pip
+          .venv/bin/pip install -e .
+
+      - name: Audit runtime dependencies
+        run: |
+          python -m pip install pip-audit
+          .venv/bin/pip freeze --exclude-editable | tee requirements-audit.txt
+          python -m pip_audit --progress-spinner off --disable-pip --no-deps -r requirements-audit.txt
+
+      - name: Install test extras
+        run: .venv/bin/pip install -e ".[test]" build
 
       - name: Lint with ruff
-        run: ruff check src tests
+        run: .venv/bin/ruff check src tests
 
-      - name: Run unit tests (mocked; no secrets; test URL only)
-        run: pytest -q -m "not live"
+      - name: Refuse test host in published library sources
+        run: |
+          if grep -R --include='*.py' -n "openapi-test.posiverse.com" src; then
+            echo "Test OpenAPI hostname must not appear in library source" >&2
+            exit 1
+          fi
+
+      - name: Run unit tests (mocked; no secrets; live marker excluded)
+        run: .venv/bin/pytest -q -m "not live"
+
+      - name: Build wheel and confirm it omits the test host
+        run: |
+          .venv/bin/python -m build --wheel
+          .venv/bin/python - <<'PY'
+          import zipfile
+          from pathlib import Path
+
+          needle = b"openapi-test.posiverse.com"
+          wheels = list(Path("dist").glob("*.whl"))
+          assert wheels, "no wheel built"
+          for wheel in wheels:
+              with zipfile.ZipFile(wheel) as archive:
+                  for name in archive.namelist():
+                      data = archive.read(name)
+                      if needle in data:
+                          raise SystemExit(f"test OpenAPI hostname found in {wheel.name}:{name}")
+          print("wheel omits test OpenAPI hostname")
+          PY
