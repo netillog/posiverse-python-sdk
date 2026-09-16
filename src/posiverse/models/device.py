@@ -6,7 +6,7 @@ from sibling model modules. Extra API fields are preserved.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import Field
 
@@ -38,12 +38,18 @@ class Device(PosiverseModel):
         None,
         description="Last date the device checked into Posiverse cloud, in UTC millis since 1970-01-01",
     )
-    propertiesVer: Optional[str] = Field(None, description="The current version of the properties")
+    # Live TEST/PROD APIs may return int despite OpenAPI type:string; accept both.
+    propertiesVer: Optional[Union[str, int]] = Field(
+        None, description="The current version of the properties"
+    )
     propertiesDate: Optional[int] = Field(
         None,
         description="Last date the device updated its properties, in UTC millis since 1970-01-01",
     )
-    settingsVer: Optional[str] = Field(None, description="The current version of the settings")
+    # Live TEST/PROD APIs may return int despite OpenAPI type:string; accept both.
+    settingsVer: Optional[Union[str, int]] = Field(
+        None, description="The current version of the settings"
+    )
     settingsDate: Optional[int] = Field(
         None, description="Date expected settings where created, in UTC millis since 1970-01-01"
     )
