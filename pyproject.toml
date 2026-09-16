@@ -57,7 +57,7 @@ include = [
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
-  "live: optional live smoke test against https://openapi-test.posiverse.com only",
+  "live: optional live tests against https://openapi-test.posiverse.com only (excluded by default)",
 ]
 addopts = ["-m", "not live"]
 

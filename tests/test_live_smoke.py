@@ -1,9 +1,9 @@
 """Optional live smoke test against the Posiverse TEST OpenAPI only.
 
-This module is skipped unless ``POSIVERSE_LIVE_SMOKE=1`` and
-``POSIVERSE_API_KEY`` are set. It always uses
-``https://openapi-test.posiverse.com`` and never the production host.
-CI does not enable this marker.
+This module is skipped unless ``POSIVERSE_API_KEY`` is set and either
+``POSIVERSE_LIVE_SMOKE=1`` or ``POSIVERSE_LIVE_INTEGRATION=1`` is set.
+It always uses ``https://openapi-test.posiverse.com`` and never the
+production host. CI does not enable this marker.
 """
 
 from __future__ import annotations
@@ -14,11 +14,27 @@ import pytest
 
 from posiverse import TEST_BASE_URL, PosiverseClient
 
+
+def _live_gate_enabled() -> bool:
+    """Return True when either live smoke or live integration is enabled.
+
+    Returns:
+        True if ``POSIVERSE_LIVE_SMOKE=1`` or ``POSIVERSE_LIVE_INTEGRATION=1``.
+    """
+    return (
+        os.environ.get("POSIVERSE_LIVE_SMOKE") == "1"
+        or os.environ.get("POSIVERSE_LIVE_INTEGRATION") == "1"
+    )
+
+
 pytestmark = [
     pytest.mark.live,
     pytest.mark.skipif(
-        os.environ.get("POSIVERSE_LIVE_SMOKE") != "1",
-        reason="live smoke disabled (set POSIVERSE_LIVE_SMOKE=1 to enable)",
+        not _live_gate_enabled(),
+        reason=(
+            "live smoke disabled (set POSIVERSE_LIVE_SMOKE=1 or "
+            "POSIVERSE_LIVE_INTEGRATION=1 to enable)"
+        ),
     ),
 ]
 

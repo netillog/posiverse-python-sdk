@@ -1,0 +1,541 @@
+{
+  "mask": {
+    "ver": {
+      "ver": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 0
+      }
+    },
+    "config": {
+      "mqttUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 200,
+        "default": ""
+      },
+      "reportList": {
+        "type": "text",
+        "min": 0,
+        "max": 140,
+        "default": "harsh, vchange, orientation, analytics, vcm_analytics, bootup"
+      },
+      "rootCAUrl": {
+        "type": "text"
+      },
+      "interval": {
+        "type": "int",
+        "min": 300,
+        "max": 4294967295,
+        "default": 86400
+      },
+      "pdpType": {
+        "type": "int",
+        "default": 3,
+        "options": [
+          {
+            "label": "IPV4",
+            "value": 0
+          },
+          {
+            "label": "PPP",
+            "value": 1
+          },
+          {
+            "label": "IPV6",
+            "value": 2
+          },
+          {
+            "label": "IPV4V6 (default)",
+            "value": 3
+          }
+        ]
+      },
+      "feature": {
+        "type": "int",
+        "mask": [
+          {
+            "DIAGNOSTIC_SETTING": 0,
+            "MODEM_SLEEP_EN_SETTING": 1,
+            "FEATURE_GPS_PSM_ENABLED": 2,
+            "SUSPEND_SETTING": 4,
+            "ENABLE_DOOR_SWITCH_SETTING": 6,
+            "ENABLE_CODRIVER_SETTING": 7,
+            "ENABLE_HARSH_BUZZER": 8,
+            "DRIVER_ID_REMIND_SETTING": 10,
+            "ECM_DISABLE": 12,
+            "DISABLE_MDM_ON_LO_VOLT": 14,
+            "LOC_REPORT_ONLY": 16,
+            "IGNORE_ENG_VIB_AND_VOLT": 17,
+            "CAN_DATA_LOG_SETTING_BIN": 18,
+            "J1939_CUMMINS_RPT": 19,
+            "ALW_USE_LOW_PWR_SLEEP": 25,
+            "DISABLE_SWITCH_INPUT": 26,
+            "IGNITION_FOLLOWS_MOTION": 28,
+            "J1979_DISABLE_LOWEST_ECU_READING": 29,
+            "PROTOCOL_J1939_IGNORE": 30,
+            "PROTOCOL_J1979_IGNORE": 31
+          }
+        ],
+        "default": 1
+      }
+    },
+    "analytics": {
+      "interval": {
+        "type": "int",
+        "min": 0,
+        "max": 4294967295,
+        "default": 86400
+      },
+      "feature": {
+        "type": "int",
+        "mask": [
+          {
+            "ANALYTICS_MODEM_STATS": 0,
+            "ANALYTICS_GPS_STATS": 1,
+            "ANALYTICS_BLUETOOTH": 2,
+            "ANALYTICS_VOLTAGE_STATS": 3
+          }
+        ],
+        "default": 0
+      }
+    },
+    "telemetry": {
+      "mqttUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 200,
+        "default": ""
+      },
+      "topic": {
+        "type": "text",
+        "min": 0,
+        "max": 100,
+        "default": ""
+      },
+      "rootCAUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 500,
+        "default": ""
+      },
+      "provisionUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 300,
+        "default": "device"
+      },
+      "reportList": {
+        "type": "text",
+        "min": 0,
+        "max": 140,
+        "default": "hf, loc, trip, vbus, vdtc, temp, vchange, harsh, switch, orientation, drv, panic, hotspot, bootup, checkin"
+      },
+      "feature": {
+        "type": "int",
+        "mask": [
+          {
+            "THIRD_PARTY_COMPRESS": 0,
+            "INCLUDE_DEVICE_ID": 1,
+            "INCLUDE_TIMESTAMP": 2,
+            "ENABLE_VERBOSE": 3
+          }
+        ],
+        "default": 15
+      }
+    },
+    "ota": {
+      "mainUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 99,
+        "default": ""
+      },
+      "mainVer": {
+        "type": "text",
+        "min": 0,
+        "max": 63,
+        "default": ""
+      },
+      "bluetoothUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 99,
+        "default": ""
+      },
+      "bluetoothVer": {
+        "type": "text",
+        "min": 0,
+        "max": 63,
+        "default": ""
+      },
+      "modemUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 99,
+        "default": ""
+      },
+      "modemVer": {
+        "type": "text",
+        "min": 0,
+        "max": 63,
+        "default": ""
+      },
+      "ephemBaseUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 59,
+        "default": ""
+      },
+      "vcmVehicleLibUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 300,
+        "default": ""
+      },
+      "vcmProtocolLibUrl": {
+        "type": "text",
+        "min": 0,
+        "max": 300,
+        "default": ""
+      },
+      "feature": {
+        "type": "int",
+        "mask": [
+          {
+            "OTA_ALLOW_MCU_FW_DOWNGRADE": 0
+          }
+        ],
+        "default": 0
+      }
+    },
+    "motion": {
+      "telemInterval": {
+        "type": "int",
+        "min": 5,
+        "max": 4294967295,
+        "default": 60
+      },
+      "stopInterval": {
+        "type": "int",
+        "min": 5,
+        "max": 4294967295,
+        "default": 14400
+      },
+      "interimStopInt": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 20
+      },
+      "recheckTmSecs": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 30
+      },
+      "stopAccelWupThresh": {
+        "type": "int",
+        "min": 1,
+        "max": 63,
+        "default": 1
+      },
+      "battRptCount": {
+        "type": "int",
+        "min": 1,
+        "max": 2880,
+        "default": 5
+      },
+      "moveDistThresh": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 80
+      },
+      "battLowMult": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 5
+      },
+      "battMedMult": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 3
+      },
+      "targAcc": {
+        "type": "int",
+        "min": 5,
+        "max": 4294967295,
+        "default": 20
+      },
+      "targAccTO": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 60
+      },
+      "curvFitInt": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 2
+      },
+      "curvFitTrig": {
+        "type": "int",
+        "min": 1,
+        "max": 4294967295,
+        "default": 10
+      },
+      "periodicHfInt": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 10
+      },
+      "curvFit": {
+        "type": "boolean",
+        "default": true
+      },
+      "enableHF": {
+        "type": "boolean",
+        "default": false
+      },
+      "periodicHfEn": {
+        "type": "boolean",
+        "default": false
+      },
+      "motionMovingSpeed": {
+        "type": "int",
+        "min": 1,
+        "max": 255,
+        "default": 5
+      }
+    },
+    "vehicle": {
+      "cfgIgnThresh": {
+        "type": "int",
+        "min": 6000,
+        "max": 4294967295,
+        "default": 13800
+      },
+      "fuelTankSize": {
+        "type": "int",
+        "min": 0,
+        "max": 4294967295,
+        "default": 0
+      },
+      "vinOverride": {
+        "type": "text",
+        "min": 0,
+        "max": 17,
+        "default": ""
+      },
+      "lowVinCutoff": {
+        "type": "int",
+        "min": 6000,
+        "max": 4294967295,
+        "default": 10800
+      },
+      "gpsOdomOffset": {
+        "type": "int",
+        "min": 0,
+        "max": 4294967295,
+        "default": 0
+      },
+      "disableEVDetection": {
+        "type": "boolean",
+        "default": false
+      },
+      "ignoreEngSecsVinList": {
+        "type": "text",
+        "min": 0,
+        "max": 60,
+        "default": "JC,JM,1Y,1Z,3M"
+      },
+      "evChargeCollInterval": {
+        "type": "int",
+        "min": 60,
+        "max": 4294967295,
+        "default": 300
+      }
+    },
+    "driverBehavior": {
+      "lightImp": {
+        "type": "int",
+        "min": 31,
+        "max": 8000,
+        "default": 1650
+      },
+      "disableHarsh": {
+        "type": "boolean",
+        "default": false
+      },
+      "harshBuzzer": {
+        "type": "boolean",
+        "default": false
+      },
+      "lightPeriod": {
+        "type": "int",
+        "min": 100,
+        "max": 1000,
+        "default": 700
+      },
+      "lightBrake": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 550
+      },
+      "lightAccel": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 350
+      },
+      "lightTurn": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 550
+      },
+      "heavyPeriod": {
+        "type": "int",
+        "min": 100,
+        "max": 1000,
+        "default": 250
+      },
+      "heavyBrake": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 350
+      },
+      "heavyAccel": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 350
+      },
+      "heavyTurn": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 700
+      },
+      "heavyImp": {
+        "type": "int",
+        "min": 31,
+        "max": 8000,
+        "default": 1650
+      },
+      "spdAdj": {
+        "type": "int",
+        "min": 1,
+        "max": 100,
+        "default": 75
+      },
+      "impactPeriod": {
+        "type": "int",
+        "min": 1,
+        "max": 1000,
+        "default": 200
+      },
+      "spdToTrigrWrnKmh": {
+        "type": "int",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      "spdToTrigrWrnDurSec": {
+        "type": "int",
+        "min": 0,
+        "max": 255,
+        "default": 0
+      },
+      "harshMaxImp": {
+        "type": "int",
+        "min": 0,
+        "max": 65535,
+        "default": 5000
+      },
+      "harshConfig": {
+        "type": "int",
+        "mask": [
+          {
+            "WEAK_IMPACT_RPT": 0,
+            "WEAK_HARSH_RPTS": 1,
+            "LOW_PASS_FILT_COUNT_EN": 2
+          }
+        ],
+        "default": 0
+      },
+      "harshWeakImp": {
+        "type": "int",
+        "min": 0,
+        "max": 65535,
+        "default": 1320
+      }
+    },
+    "driverId": {
+      "reminder": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 5
+      },
+      "timeout": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 3600
+      },
+      "offTime": {
+        "type": "int",
+        "min": 1,
+        "max": 65535,
+        "default": 300
+      }
+    },
+    "bluetooth": {
+      "scan": {
+        "type": "int",
+        "min": 0,
+        "max": 30,
+        "default": 0
+      },
+      "stopInterval": {
+        "type": "int",
+        "min": 1,
+        "max": 71582788,
+        "default": 10
+      },
+      "moveInterval": {
+        "type": "int",
+        "min": 1,
+        "max": 71582788,
+        "default": 10
+      },
+      "macFilter": {
+        "type": "text",
+        "min": 0,
+        "max": 8,
+        "default": ""
+      },
+      "nameFilter": {
+        "type": "text",
+        "min": 0,
+        "max": 17,
+        "default": ""
+      },
+      "beaconFilter": {
+        "type": "text",
+        "min": 0,
+        "max": 18,
+        "default": ""
+      }
+    }
+  }
+}

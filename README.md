@@ -106,13 +106,30 @@ ruff check src tests
 pytest          # mocked unit tests; live marker is excluded by default
 ```
 
-Unit tests use **respx** mocks against the test base URL only — no secrets and no production calls.
+Unit tests use **respx** mocks against the test base URL only — no secrets and no production calls. The default pytest config excludes the `live` marker (`addopts = -m "not live"`), so CI stays mocked.
 
-An optional live smoke test exists (`tests/test_live_smoke.py`) and is skipped unless you set `POSIVERSE_LIVE_SMOKE=1` **and** `POSIVERSE_API_KEY`. It always uses `https://openapi-test.posiverse.com`. Never point it at production.
+### Live smoke / integration (TEST API only)
+
+Live tests always target **`https://openapi-test.posiverse.com`** and refuse production. Never set a production base URL in these suites.
+
+| Flag | Purpose |
+|------|---------|
+| `POSIVERSE_LIVE_SMOKE=1` | Enable the minimal smoke test in `tests/test_live_smoke.py` |
+| `POSIVERSE_LIVE_INTEGRATION=1` | Enable the full per-tag suite under `tests/integration/` (also enables smoke) |
+| `POSIVERSE_API_KEY` | Required for any live run (sent as `posiverse-auth-key`) |
 
 ```bash
-POSIVERSE_LIVE_SMOKE=1 POSIVERSE_API_KEY=... pytest -m live
+# Mocked unit tests (default CI)
+pytest
+
+# Full live integration against TEST only
+POSIVERSE_LIVE_INTEGRATION=1 POSIVERSE_API_KEY=... pytest -m live -v --tb=short
+
+# Smoke only
+POSIVERSE_LIVE_SMOKE=1 POSIVERSE_API_KEY=... pytest -m live tests/test_live_smoke.py
 ```
+
+Settings write coverage uses the known TEST device and constraints from `tests/integration/fixtures/Release.json` (mask keys: ver, config, analytics, telemetry, ota, motion, vehicle, driverBehavior, driverId, bluetooth). Prior values are restored when practical. Irreversible deletes (tenants/users/devices) and destructive device commands (for example `reset`) are skipped.
 
 OpenAPI source of truth: `openapi/posiverse.openapi.json`.
 
