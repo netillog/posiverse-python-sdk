@@ -15,12 +15,14 @@ Copy `.env.example` to `.env` for local secrets. `.env` is gitignored — never 
 CI runs these on every pull request. Run them locally before opening a PR:
 
 ```bash
+python -m pip install --upgrade pip wheel
+python -m pip install --upgrade "setuptools>=83"   # Python 3.10+; skip on 3.9
 ruff check src tests
 pytest                 # mocked; live marker excluded
 pip-audit --skip-editable
 ```
 
-Run `pip-audit` inside the same virtualenv. A system Python may report unrelated packages. Do not weaken or skip these checks to land a change.
+Run `pip-audit` inside the same virtualenv. A system Python may report unrelated packages. On Python 3.9, `pip-audit` may report PYSEC-2026-3447 in setuptools; that advisory is fixed in setuptools 83, which requires Python 3.10+. Do not weaken or skip these checks to land a change.
 
 ## Client defaults
 
