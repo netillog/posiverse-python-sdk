@@ -1,4 +1,6 @@
 .venv/
+venv/
+env/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -11,3 +13,7 @@ build/
 .coverage
 htmlcov/
 *.egg
+.env
+.env.*
+!.env.example
+.python-version

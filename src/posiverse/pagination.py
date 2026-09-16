@@ -1,12 +1,18 @@
 """Pagination helpers for Posiverse list endpoints.
 
 Posiverse returns pagination metadata in response headers rather than the
-JSON body. See OpenAPI info.description for header semantics.
+JSON body. The OpenAPI documents four headers:
+
+* ``x-total-count``: total objects matching the query (always returned)
+* ``x-page-count``: objects in the current response (always returned)
+* ``x-page-start``: zero-based offset of this page (always returned)
+* ``x-next-page-url``: partial URL of the next page; prepend the client
+  base URL. Absent when no further pages exist.
 """
 
 from __future__ import annotations
 
-from typing import Generic, List, Optional, TypeVar
+from typing import Any, Generic, List, Mapping, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -42,8 +48,26 @@ class PaginatedResponse(BaseModel, Generic[T]):
         """Return True when a next-page URL header was present."""
         return bool(self.next_page_url)
 
+    def absolute_next_page_url(self, base_url: str) -> Optional[str]:
+        """Build a requestable next-page URL from the partial header value.
 
-def parse_int_header(headers: dict, name: str) -> Optional[int]:
+        Args:
+            base_url: Server URL used for the original request (no trailing
+                path). The OpenAPI requires callers to prepend this value.
+
+        Returns:
+            An absolute URL, the original value if it is already absolute,
+            or None when there is no next page.
+        """
+        if not self.next_page_url:
+            return None
+        next_url = self.next_page_url
+        if next_url.startswith("http://") or next_url.startswith("https://"):
+            return next_url
+        return base_url.rstrip("/") + "/" + next_url.lstrip("/")
+
+
+def parse_int_header(headers: Mapping[str, Any], name: str) -> Optional[int]:
     """Parse an integer pagination header, returning None if absent/invalid.
 
     Args:
@@ -53,7 +77,7 @@ def parse_int_header(headers: dict, name: str) -> Optional[int]:
     Returns:
         Parsed integer value, or None when missing or not an integer.
     """
-    raw = headers.get(name)
+    raw = headers.get(name) if hasattr(headers, "get") else None
     if raw is None or raw == "":
         return None
     try:
@@ -62,20 +86,23 @@ def parse_int_header(headers: dict, name: str) -> Optional[int]:
         return None
 
 
-def pagination_from_headers(headers: dict) -> dict:
+def pagination_from_headers(headers: Mapping[str, Any]) -> dict:
     """Extract pagination fields from an HTTP response header mapping.
 
     Args:
-        headers: Response headers (e.g. ``httpx.Headers``).
+        headers: Response headers (for example ``httpx.Headers``, which is
+            case-insensitive so ``x-total-count`` matches ``X-Total-Count``).
 
     Returns:
         Dict suitable for constructing :class:`PaginatedResponse` kwargs.
     """
-    # httpx.Headers is case-insensitive; normalize via .get
-    get = headers.get if hasattr(headers, "get") else lambda k: headers[k]
+    get = headers.get
+    next_url = get(HEADER_NEXT_PAGE_URL)
+    if next_url == "":
+        next_url = None
     return {
         "total_count": parse_int_header(headers, HEADER_TOTAL_COUNT),
         "page_count": parse_int_header(headers, HEADER_PAGE_COUNT),
         "page_start": parse_int_header(headers, HEADER_PAGE_START),
-        "next_page_url": get(HEADER_NEXT_PAGE_URL) or None,
+        "next_page_url": next_url,
     }

@@ -46,15 +46,20 @@ packages = ["src/posiverse"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "src/posiverse",
-  "openapi/posiverse.openapi.json",
-  "README.md",
-  "LICENSE",
+  "/src",
+  "/openapi",
+  "/tests",
+  "/README.md",
+  "/LICENSE",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "live: optional live smoke test against https://openapi-test.posiverse.com only",
+]
+addopts = ["-m", "not live"]
 
 [tool.ruff]
 line-length = 100
@@ -64,3 +69,6 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
 ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["posiverse"]

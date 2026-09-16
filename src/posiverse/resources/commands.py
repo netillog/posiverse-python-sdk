@@ -1,6 +1,6 @@
 """Commands resource — OpenAPI tag Commands.
 
-Paths: GET/POST/DELETE /commands/{deviceId}
+Paths: GET/POST/DELETE ``/commands/{deviceId}``.
 """
 
 from __future__ import annotations
@@ -12,16 +12,16 @@ from posiverse.resources._base import BaseResource
 
 
 class CommandsResource(BaseResource):
-    """Manage queued device commands."""
+    """Manage queued device commands (OpenAPI tag Commands)."""
 
     def list(self, device_id: str) -> List[Command]:
-        """List pending commands for a device (getCommands).
+        """List pending commands for a device (operation ``getCommands``).
 
         Args:
             device_id: Device UUID.
 
         Returns:
-            List of Command objects.
+            List of :class:`~posiverse.models.command.Command` objects.
 
         Raises:
             AuthenticationError: Invalid or missing API key.
@@ -34,10 +34,10 @@ class CommandsResource(BaseResource):
         return [Command.model_validate(item) for item in (data or [])]
 
     def add(self, device_id: str, command: str) -> None:
-        """Queue a command on a device (addCommand).
+        """Queue a command on a device (operation ``addCommand``).
 
         The OpenAPI request body is ``text/plain`` containing the command
-        string (e.g. ``\"reset\"``).
+        string (for example ``\"reset\"``).
 
         Args:
             device_id: Device UUID.
@@ -58,7 +58,7 @@ class CommandsResource(BaseResource):
         )
 
     def delete(self, device_id: str) -> None:
-        """Delete pending commands for a device (deleteCommand).
+        """Delete pending commands for a device (operation ``deleteCommand``).
 
         Args:
             device_id: Device UUID.

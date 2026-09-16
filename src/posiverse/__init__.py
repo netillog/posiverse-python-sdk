@@ -16,6 +16,7 @@ Default base URL is the test server
 ``PROD_BASE_URL`` but live tests must never target production.
 """
 
+from posiverse._version import __version__
 from posiverse.client import (
     API_KEY_ENV,
     AUTH_HEADER,
@@ -33,8 +34,6 @@ from posiverse.errors import (
     RateLimitError,
 )
 from posiverse.pagination import PaginatedResponse
-
-__version__ = "0.1.0"
 
 __all__ = [
     "API_KEY_ENV",

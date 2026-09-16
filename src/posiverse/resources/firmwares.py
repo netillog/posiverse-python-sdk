@@ -1,6 +1,6 @@
 """Firmwares resource — OpenAPI tag Firmwares.
 
-Paths: GET /firmwares, GET /firmwares/{firmwareId}
+Paths: GET ``/firmwares``, GET ``/firmwares/{firmwareId}``.
 """
 
 from __future__ import annotations
@@ -16,13 +16,13 @@ class FirmwaresResource(BaseResource):
     """List and fetch firmware records."""
 
     def list(self, *, tenant_id: Optional[str] = None) -> PaginatedResponse[Firmware]:
-        """List firmwares (getFirmwares).
+        """List firmwares (operation ``getFirmwares``).
 
         Args:
             tenant_id: Alternate tenant UUID.
 
         Returns:
-            PaginatedResponse of Firmware objects.
+            Paginated list of :class:`~posiverse.models.firmware.Firmware` objects.
 
         Raises:
             AuthenticationError: Invalid or missing API key.
@@ -38,13 +38,13 @@ class FirmwaresResource(BaseResource):
         )
 
     def get(self, firmware_id: str) -> Firmware:
-        """Get a firmware by ID (getFirmware).
+        """Get a firmware by ID (operation ``getFirmware``).
 
         Args:
             firmware_id: Firmware UUID.
 
         Returns:
-            Firmware object.
+            A :class:`~posiverse.models.firmware.Firmware` object.
 
         Raises:
             NotFoundError: Firmware not found.

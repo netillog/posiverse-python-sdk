@@ -1,7 +1,8 @@
 """Exception hierarchy for Posiverse API errors.
 
-Maps HTTP status codes used by the OpenAPI to typed exceptions so callers
-can handle auth, validation, and rate-limit failures distinctly.
+Maps HTTP status codes declared in the OpenAPI (400, 401, 403, 404, 429)
+to typed exceptions so callers can handle auth, validation, and
+rate-limit failures distinctly. Other non-2xx codes raise :class:`APIError`.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ class APIError(Exception):
         self.body = body
 
     def __str__(self) -> str:
+        """Return ``[status] message`` when a status code is known."""
         if self.status_code is not None:
             return f"[{self.status_code}] {self.message}"
         return self.message
@@ -69,13 +71,16 @@ STATUS_ERROR_MAP: dict[int, type[APIError]] = {
 def raise_for_status(status_code: int, body: Any = None) -> None:
     """Raise a typed APIError when ``status_code`` indicates failure.
 
+    Prefers the OpenAPI ``Error`` schema fields ``code`` and ``message``
+    when the body is a JSON object.
+
     Args:
         status_code: HTTP response status code.
         body: Parsed response body used to enrich the error message.
 
     Raises:
-        APIError: Subclass matching the status code, or a generic APIError
-            for other non-2xx codes.
+        APIError: Subclass matching 400/401/403/404/429, or a generic
+            APIError for other non-2xx codes.
     """
     if 200 <= status_code < 300:
         return
@@ -83,9 +88,12 @@ def raise_for_status(status_code: int, body: Any = None) -> None:
     # Prefer structured Error schema fields when present.
     message = f"HTTP {status_code}"
     if isinstance(body, dict):
-        message = str(body.get("message") or body.get("error") or message)
-        if "code" in body and body.get("message"):
-            message = f"{body['code']}: {body['message']}"
+        code = body.get("code")
+        text = body.get("message") or body.get("error")
+        if code is not None and text:
+            message = f"{code}: {text}"
+        elif text:
+            message = str(text)
     elif isinstance(body, str) and body:
         message = body
 

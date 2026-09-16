@@ -1,6 +1,6 @@
 """Products resource — OpenAPI tag Products.
 
-Paths: GET /products, GET /products/{productId}
+Paths: GET ``/products``, GET ``/products/{productId}``.
 """
 
 from __future__ import annotations
@@ -16,13 +16,13 @@ class ProductsResource(BaseResource):
     """List and fetch product definitions."""
 
     def list(self, *, tenant_id: Optional[str] = None) -> PaginatedResponse[Product]:
-        """List products (getProducts).
+        """List products (operation ``getProducts``).
 
         Args:
             tenant_id: Alternate tenant UUID.
 
         Returns:
-            PaginatedResponse of Product objects.
+            Paginated list of :class:`~posiverse.models.product.Product` objects.
 
         Raises:
             AuthenticationError: Invalid or missing API key.
@@ -38,13 +38,13 @@ class ProductsResource(BaseResource):
         )
 
     def get(self, product_id: str) -> Product:
-        """Get a product by ID (getProduct).
+        """Get a product by ID (operation ``getProduct``).
 
         Args:
             product_id: Product UUID.
 
         Returns:
-            Product object.
+            A :class:`~posiverse.models.product.Product` object.
 
         Raises:
             NotFoundError: Product not found.

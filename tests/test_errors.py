@@ -13,6 +13,7 @@ from posiverse import (
     NotFoundError,
     RateLimitError,
 )
+from posiverse.errors import raise_for_status
 
 
 @pytest.mark.parametrize(
@@ -38,3 +39,16 @@ def test_error_mapping(mock_api, client, status, exc_cls):
         client.devices.get("missing")
     assert info.value.status_code == status
     assert "error-" in str(info.value)
+
+
+def test_raise_for_status_ignores_2xx():
+    """2xx statuses must not raise."""
+    raise_for_status(200, {"ok": True})
+    raise_for_status(204, None)
+
+
+def test_error_message_from_plain_text():
+    """String bodies are used as the exception message."""
+    with pytest.raises(BadRequestError, match="nope") as info:
+        raise_for_status(400, "nope")
+    assert info.value.body == "nope"

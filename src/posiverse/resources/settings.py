@@ -1,6 +1,6 @@
 """Settings resource — OpenAPI tag Settings.
 
-Paths: GET/PUT /settings/{ownerId}
+Paths: GET/PUT ``/settings/{ownerId}``.
 """
 
 from __future__ import annotations
@@ -15,16 +15,16 @@ class SettingsResource(BaseResource):
     """Read and update expected settings for a device or group owner."""
 
     def get(self, owner_id: str) -> Settings:
-        """Get settings for an owner (getSettings).
+        """Get settings for an owner (operation ``getSettings``).
 
         Args:
             owner_id: Device or group UUID that owns the settings.
 
         Returns:
-            Settings object.
+            A :class:`~posiverse.models.settings.Settings` object.
 
         Raises:
-            NotFoundError: Owner/settings not found.
+            NotFoundError: Owner or settings not found.
             AuthenticationError: Invalid or missing API key.
             BadRequestError: Invalid request.
             RateLimitError: Rate limited.
@@ -33,19 +33,25 @@ class SettingsResource(BaseResource):
         return Settings.model_validate(data)
 
     def update(self, owner_id: str, body: Union[SettingsPut, dict]) -> None:
-        """Modify settings for an owner (modifySettings).
+        """Modify settings for an owner (operation ``modifySettings``).
+
+        Changing a group's settings applies to devices moved into the group
+        later; existing devices in the group are not updated (OpenAPI tag
+        description).
 
         Args:
             owner_id: Device or group UUID that owns the settings.
-            body: SettingsPut model or dict of mutable settings sections.
+            body: :class:`~posiverse.models.settings.SettingsPut` or dict of
+                mutable settings sections.
 
         Raises:
-            NotFoundError: Owner/settings not found.
+            NotFoundError: Owner or settings not found.
             AuthenticationError: Invalid or missing API key.
             BadRequestError: Invalid request.
             RateLimitError: Rate limited.
         """
-        payload = (
-            body.model_dump(exclude_none=True) if isinstance(body, SettingsPut) else body
+        self._client.request(
+            "PUT",
+            f"/settings/{owner_id}",
+            json=self._client.dump_body(body),
         )
-        self._client.request("PUT", f"/settings/{owner_id}", json=payload)
