@@ -14,6 +14,7 @@ import pytest
 
 from posiverse import TEST_BASE_URL, PosiverseClient
 
+
 def _live_gate_enabled() -> bool:
     """Return True when either live smoke or live integration is enabled.
 

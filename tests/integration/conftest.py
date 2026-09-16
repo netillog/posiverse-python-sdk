@@ -12,7 +12,6 @@ import os
 import pytest
 
 from posiverse import TEST_BASE_URL, PosiverseClient
-
 from tests.integration.helpers import (
     KNOWN_TEST_DEVICE_ID,
     KNOWN_TEST_IMEI,
@@ -22,7 +21,6 @@ from tests.integration.helpers import (
     live_integration_enabled,
     load_release_mask,
 )
-
 
 # Apply the live marker to every test under tests/integration/.
 pytestmark = pytest.mark.live
