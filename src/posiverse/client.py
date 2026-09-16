@@ -2,13 +2,14 @@
 
 Authentication uses the ``posiverse-auth-key`` header (OpenAPI security
 scheme ``bearerAuth`` is an ``apiKey`` header, not HTTP Bearer). The
-client defaults to the test server so automated use cannot accidentally
-target production. Production remains available via ``PROD_BASE_URL``.
+client defaults to production. Staff and bots override the host with
+``base_url=`` or ``POSIVERSE_BASE_URL``.
 """
 
 from __future__ import annotations
 
 import os
+import ssl
 from typing import Any, Iterator, Mapping, Optional, Type, TypeVar, Union
 from urllib.parse import urlparse
 
@@ -17,6 +18,14 @@ from pydantic import BaseModel
 
 from posiverse._utils import drop_none, dump_json_body
 from posiverse._version import __version__
+from posiverse.config import (
+    API_KEY_ENV,
+    AUTH_HEADER,
+    BASE_URL_ENV,
+    DEFAULT_BASE_URL,
+    PROD_BASE_URL,
+    PosiverseConfig,
+)
 from posiverse.errors import raise_for_status
 from posiverse.pagination import PaginatedResponse, pagination_from_headers
 from posiverse.resources.commands import CommandsResource
@@ -32,37 +41,32 @@ from posiverse.resources.tenants import TenantsResource
 from posiverse.resources.users import UsersResource
 from posiverse.resources.virtual_console import VirtualConsoleResource
 
-# OpenAPI servers[] — production is documented but never the client default.
-PROD_BASE_URL = "https://openapi-prod.posiverse.com"
-TEST_BASE_URL = "https://openapi-test.posiverse.com"
-DEFAULT_BASE_URL = TEST_BASE_URL
-
-# components.securitySchemes.bearerAuth: apiKey in header posiverse-auth-key
-AUTH_HEADER = "posiverse-auth-key"
-API_KEY_ENV = "POSIVERSE_API_KEY"
-
 T = TypeVar("T", bound=BaseModel)
 
 
-def _decode_body(response: httpx.Response) -> Any:
-    """Parse a response body as JSON when possible, else text or None.
+class HttpBody:
+    """Decode HTTP response bodies for the Posiverse client."""
 
-    Args:
-        response: Completed HTTP response.
+    @staticmethod
+    def decode(response: httpx.Response) -> Any:
+        """Parse a response body as JSON when possible, else text or None.
 
-    Returns:
-        Parsed JSON (dict/list/primitive), a string, or None for empty bodies.
-    """
-    if not response.content:
-        return None
-    content_type = response.headers.get("content-type", "")
-    # Some error payloads are JSON without a precise content-type; try JSON first.
-    try:
-        return response.json()
-    except ValueError:
-        if "json" in content_type.lower():
+        Args:
+            response: Completed HTTP response.
+
+        Returns:
+            Parsed JSON (dict/list/primitive), a string, or None for empty bodies.
+        """
+        if not response.content:
             return None
-        return response.text
+        content_type = response.headers.get("content-type", "")
+        # Some error payloads are JSON without a precise content-type; try JSON first.
+        try:
+            return response.json()
+        except ValueError:
+            if "json" in content_type.lower():
+                return None
+            return response.text
 
 
 class PosiverseClient:
@@ -75,24 +79,27 @@ class PosiverseClient:
     Args:
         api_key: Posiverse API key sent as the ``posiverse-auth-key`` header.
             When omitted, ``POSIVERSE_API_KEY`` is read from the environment.
-        base_url: API server URL. Defaults to the test server
-            (``https://openapi-test.posiverse.com``). Pass ``PROD_BASE_URL``
-            for production. Tests must never use the production URL.
+        base_url: API server URL. Defaults to production
+            (``https://openapi-prod.posiverse.com``), or ``POSIVERSE_BASE_URL``
+            when that environment variable is set. Must be https.
         timeout: httpx timeout in seconds, or an ``httpx.Timeout`` instance.
+            Defaults to 30 seconds. ``None`` is rejected.
         transport: Optional httpx transport (useful for custom adapters).
         http_client: Existing ``httpx.Client`` to reuse. When provided the
-            caller owns its lifecycle unless ``owns_client`` is True.
+            caller owns its lifecycle unless ``owns_client`` is True. The
+            SDK still requires TLS verification on clients it creates.
 
     Raises:
-        ValueError: If no API key is provided and ``POSIVERSE_API_KEY`` is unset.
+        ValueError: If no API key is provided and ``POSIVERSE_API_KEY`` is
+            unset, if the base URL is not https, or if ``timeout`` is None.
     """
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         *,
-        base_url: str = DEFAULT_BASE_URL,
-        timeout: Union[float, httpx.Timeout] = 30.0,
+        base_url: Optional[str] = None,
+        timeout: Union[float, httpx.Timeout] = PosiverseConfig.DEFAULT_TIMEOUT_SECONDS,
         transport: Optional[httpx.BaseTransport] = None,
         http_client: Optional[httpx.Client] = None,
     ) -> None:
@@ -103,10 +110,10 @@ class PosiverseClient:
                 "API key required: pass api_key=... or set the POSIVERSE_API_KEY environment variable"
             )
 
-        # Normalize so comparisons and next-page URL joins are stable.
-        self._base_url = base_url.rstrip("/")
+        self._base_url = PosiverseConfig.resolve_base_url(base_url)
         self._api_key = api_key
         self._owns_client = http_client is None
+        timeout = PosiverseConfig.coerce_timeout(timeout)
 
         headers = {
             AUTH_HEADER: api_key,  # apiKey scheme — not "Authorization: Bearer"
@@ -115,6 +122,7 @@ class PosiverseClient:
         }
 
         if http_client is not None:
+            PosiverseClient._reject_insecure_http_client(http_client)
             self._http = http_client
             # Ensure the required auth header is present on the shared client.
             self._http.headers[AUTH_HEADER] = api_key
@@ -124,6 +132,7 @@ class PosiverseClient:
                 headers=headers,
                 timeout=timeout,
                 transport=transport,
+                verify=True,
             )
 
         # Resource namespaces — one class per OpenAPI tag.
@@ -139,6 +148,39 @@ class PosiverseClient:
         self.tenants = TenantsResource(self)
         self.users = UsersResource(self)
         self.virtual_console = VirtualConsoleResource(self)
+
+    @staticmethod
+    def _ssl_context_of(http_client: httpx.Client) -> Optional[ssl.SSLContext]:
+        """Best-effort lookup of the SSL context on an httpx client.
+
+        Args:
+            http_client: Existing httpx client.
+        """
+        transport = getattr(http_client, "_transport", None)
+        pool = getattr(transport, "_pool", None)
+        context = getattr(pool, "_ssl_context", None)
+        return context if isinstance(context, ssl.SSLContext) else None
+
+    @staticmethod
+    def _reject_insecure_http_client(http_client: httpx.Client) -> None:
+        """Refuse a caller-supplied httpx client that disables TLS verify.
+
+        Args:
+            http_client: Existing httpx client.
+
+        Raises:
+            ValueError: If TLS verification is explicitly disabled.
+        """
+        verify = getattr(http_client, "_verify", None)
+        if verify is False:
+            raise ValueError(
+                "http_client must verify TLS; verify=False is not supported"
+            )
+        ssl_context = PosiverseClient._ssl_context_of(http_client)
+        if ssl_context is not None and ssl_context.verify_mode == ssl.CERT_NONE:
+            raise ValueError(
+                "http_client must verify TLS; verify=False is not supported"
+            )
 
     @property
     def base_url(self) -> str:
@@ -157,6 +199,17 @@ class PosiverseClient:
     def __exit__(self, *args: Any) -> None:
         """Close the HTTP client when leaving the ``with`` block."""
         self.close()
+
+    def __repr__(self) -> str:
+        """Return a debug representation that never includes the API key."""
+        return (
+            f"{self.__class__.__name__}(base_url={self._base_url!r}, "
+            f"api_key={PosiverseConfig.redact_secret(self._api_key)})"
+        )
+
+    def __str__(self) -> str:
+        """Return the same redacted representation as ``repr``."""
+        return self.__repr__()
 
     def request(
         self,
@@ -198,7 +251,7 @@ class PosiverseClient:
             content=content,
             headers=dict(headers) if headers else None,
         )
-        body = _decode_body(response)
+        body = HttpBody.decode(response)
         # Attach decoded body so request_json/request_paginated can reuse it.
         response.extensions["posiverse_body"] = body
         raise_for_status(response.status_code, body)
@@ -355,3 +408,15 @@ class PosiverseClient:
             JSON-serializable data suitable for httpx ``json=``.
         """
         return dump_json_body(body)
+
+
+__all__ = [
+    "API_KEY_ENV",
+    "AUTH_HEADER",
+    "BASE_URL_ENV",
+    "DEFAULT_BASE_URL",
+    "HttpBody",
+    "PROD_BASE_URL",
+    "PosiverseClient",
+    "PosiverseConfig",
+]

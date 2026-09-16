@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -29,5 +32,35 @@ jobs:
       - name: Lint with ruff
         run: ruff check src tests
 
-      - name: Run unit tests (mocked; no secrets; test URL only)
+      - name: Refuse test host in published library sources
+        run: |
+          if grep -R --include='*.py' -n "openapi-test.posiverse.com" src; then
+            echo "Test OpenAPI hostname must not appear in library source" >&2
+            exit 1
+          fi
+
+      - name: Run unit tests (mocked; no secrets; live marker excluded)
         run: pytest -q -m "not live"
+
+      - name: Build wheel and confirm it omits the test host
+        run: |
+          pip install build
+          python -m build --wheel
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+
+          needle = b"openapi-test.posiverse.com"
+          wheels = list(Path("dist").glob("*.whl"))
+          assert wheels, "no wheel built"
+          for wheel in wheels:
+              with zipfile.ZipFile(wheel) as archive:
+                  for name in archive.namelist():
+                      data = archive.read(name)
+                      if needle in data:
+                          raise SystemExit(f"test OpenAPI hostname found in {wheel.name}:{name}")
+          print("wheel omits test OpenAPI hostname")
+          PY
+
+      - name: Audit installed package dependencies
+        run: pip-audit --skip-editable --progress-spinner off

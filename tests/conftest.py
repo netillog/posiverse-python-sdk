@@ -11,10 +11,28 @@ import httpx
 import pytest
 import respx
 
-from posiverse import PROD_BASE_URL, TEST_BASE_URL, PosiverseClient
+from posiverse import PROD_BASE_URL, PosiverseClient
+from posiverse.config import PosiverseConfig
 
 FAKE_API_KEY = "test-api-key-not-a-secret"
 PROD_HOST = "openapi-prod.posiverse.com"
+# Reserved invalid TLD so mocked unit tests never contact a real host.
+MOCK_BASE_URL = "https://openapi.mock.invalid"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_override_env(request, monkeypatch):
+    """Keep unit tests from inheriting a developer POSIVERSE_BASE_URL.
+
+    Live tests must see the real environment so they can require the override.
+
+    Args:
+        request: Current pytest item.
+        monkeypatch: Pytest monkeypatch fixture.
+    """
+    if request.node.get_closest_marker("live"):
+        return
+    monkeypatch.delenv(PosiverseConfig.BASE_URL_ENV, raising=False)
 
 
 @pytest.fixture(autouse=True)
@@ -45,17 +63,17 @@ def api_key() -> str:
 
 @pytest.fixture
 def base_url() -> str:
-    """Return the test server base URL (never production)."""
-    return TEST_BASE_URL
+    """Return a mock https base URL (never production, never a live host)."""
+    return MOCK_BASE_URL
 
 
 @pytest.fixture
 def client(api_key: str, base_url: str):
-    """Yield a PosiverseClient bound to the mocked test server.
+    """Yield a PosiverseClient bound to the mocked server.
 
     Args:
         api_key: Fake API key fixture.
-        base_url: Test server URL fixture.
+        base_url: Mock server URL fixture.
     """
     with PosiverseClient(api_key=api_key, base_url=base_url) as c:
         yield c
@@ -63,10 +81,10 @@ def client(api_key: str, base_url: str):
 
 @pytest.fixture
 def mock_api(base_url: str):
-    """Activate a respx mock router scoped to the test base URL.
+    """Activate a respx mock router scoped to the mock base URL.
 
     Args:
-        base_url: Test server URL fixture.
+        base_url: Mock server URL fixture.
     """
     with respx.mock(
         base_url=base_url,

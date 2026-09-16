@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from posiverse.client import _decode_body
+from posiverse.client import HttpBody
 from posiverse.models import DevicePut
 
 
@@ -32,10 +32,10 @@ def test_non_array_list_raises(mock_api, client):
 def test_decode_body_empty():
     """Empty responses decode to None."""
     response = httpx.Response(200, content=b"")
-    assert _decode_body(response) is None
+    assert HttpBody.decode(response) is None
 
 
 def test_decode_body_text():
     """Non-JSON bodies are returned as text."""
     response = httpx.Response(200, text="ok", headers={"content-type": "text/plain"})
-    assert _decode_body(response) == "ok"
+    assert HttpBody.decode(response) == "ok"

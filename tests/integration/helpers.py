@@ -1,7 +1,7 @@
-"""Shared helpers for live Posiverse TEST-API integration tests.
+"""Shared helpers for live Posiverse integration tests.
 
 Hard constraints:
-    * Only ``https://openapi-test.posiverse.com`` (never production).
+    * Require ``POSIVERSE_BASE_URL`` (internal test OpenAPI); never production.
     * Never log, print, or commit ``POSIVERSE_API_KEY``.
     * Settings writes stay inside ``Release.json`` mask constraints and
       restore prior values when practical.
@@ -17,15 +17,12 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
-from posiverse import TEST_BASE_URL
+from posiverse.config import PosiverseConfig
+from tests.live_guard import LiveTestGuard
 
 # Known disposable TEST device (IMEI + UUID) for targeted reads/writes.
 KNOWN_TEST_IMEI = "016080001000367"
 KNOWN_TEST_DEVICE_ID = "9d9ba6c1-5ea5-d1b8-b78d-9b367a03f4c4"
-
-# OpenAPI servers[] - tests abort if anything else is configured.
-REQUIRED_TEST_BASE_URL = "https://openapi-test.posiverse.com"
-FORBIDDEN_PROD_HOST = "openapi-prod.posiverse.com"
 
 # Rate limit observed on TEST: max 2 requests per second per tenant.
 MIN_REQUEST_INTERVAL_SEC = 0.75
@@ -57,29 +54,23 @@ def live_integration_enabled() -> bool:
         True if ``POSIVERSE_LIVE_INTEGRATION=1`` (preferred) or the older
         ``POSIVERSE_LIVE_SMOKE=1`` gate is set.
     """
-    return (
-        os.environ.get("POSIVERSE_LIVE_INTEGRATION") == "1"
-        or os.environ.get("POSIVERSE_LIVE_SMOKE") == "1"
-    )
+    return LiveTestGuard.integration_enabled()
 
 
-def assert_test_base_url(base_url: str) -> None:
-    """Abort if ``base_url`` is not the Posiverse TEST OpenAPI host.
+def assert_not_production_base_url(base_url: str) -> str:
+    """Abort if ``base_url`` is the production OpenAPI host.
 
     Args:
         base_url: Client base URL under inspection.
 
+    Returns:
+        Normalized https URL.
+
     Raises:
-        AssertionError: If the URL is not exactly the TEST server or
-            contains the production host.
+        RuntimeError: If the URL points at production.
+        ValueError: If the URL is not https.
     """
-    normalized = base_url.rstrip("/")
-    assert normalized == REQUIRED_TEST_BASE_URL == TEST_BASE_URL, (
-        f"Live tests must use {REQUIRED_TEST_BASE_URL}, got {base_url!r}"
-    )
-    assert FORBIDDEN_PROD_HOST not in normalized, (
-        f"Refusing production host in base URL: {base_url!r}"
-    )
+    return LiveTestGuard.assert_not_production(base_url)
 
 
 def scrub_secrets(text: str) -> str:
@@ -91,14 +82,12 @@ def scrub_secrets(text: str) -> str:
     Returns:
         The same text with ``POSIVERSE_API_KEY`` value redacted when set.
     """
-    key = os.environ.get("POSIVERSE_API_KEY") or ""
-    if not key:
-        return text
+    key = os.environ.get(PosiverseConfig.API_KEY_ENV) or ""
+    scrubbed = PosiverseConfig.redact_text(text, key)
     # Also scrub common header forms in case httpx dumps headers.
-    scrubbed = text.replace(key, "[REDACTED_API_KEY]")
     scrubbed = re.sub(
         r"(posiverse-auth-key[\"'=\s:]+)[^\s\"']+",
-        r"\1[REDACTED_API_KEY]",
+        rf"\1{PosiverseConfig.REDACTED}",
         scrubbed,
         flags=re.IGNORECASE,
     )
