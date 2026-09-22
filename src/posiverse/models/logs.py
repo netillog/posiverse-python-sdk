@@ -57,7 +57,13 @@ class TelemetryLog(PosiverseModel):
 
 
 class DeviceLog(PosiverseModel):
-    """A data record class that contains information about a device log."""
+    """A data record class that contains information about a device log.
+
+    The OpenAPI schema does not define ``ts`` or ``rpt``. Report dedupe
+    (:class:`posiverse.device_logs.ReportIdentity`) reads that pair from
+    the parsed ``request`` JSON object, then ``result``, then extra
+    top-level fields.
+    """
 
     deviceId: Optional[str] = Field(None, description="UUID of device")
     date: Optional[int] = Field(
