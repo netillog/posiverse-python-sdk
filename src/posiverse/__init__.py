@@ -22,6 +22,7 @@ from posiverse.config import (
     PROD_BASE_URL,
     PosiverseConfig,
 )
+from posiverse.device_logs import DeviceLogQueries, ReportIdentity
 from posiverse.errors import (
     APIError,
     AuthenticationError,
@@ -37,8 +38,10 @@ __all__ = [
     "AUTH_HEADER",
     "BASE_URL_ENV",
     "DEFAULT_BASE_URL",
+    "DeviceLogQueries",
     "HttpBody",
     "PROD_BASE_URL",
+    "ReportIdentity",
     "APIError",
     "AuthenticationError",
     "BadRequestError",

@@ -61,6 +61,43 @@ def test_logs_device(api, known_device_id, known_imei):
     assert page.items is not None
 
 
+def test_logs_convenience_helpers(api, known_device_id):
+    """GET /devicelogs via get_logs, get_reports, and get_device_data.
+
+    Args:
+        api: Throttled live PosiverseClient fixture.
+        known_device_id: Known TEST device UUID.
+    """
+    start = _window_start_millis(2)
+    try:
+        logs = api.call_with_retry(
+            lambda: api.logs.get_logs(
+                start_millis=start,
+                device_ids=known_device_id,
+                limit=5,
+            )
+        )
+        reports = api.call_with_retry(
+            lambda: api.logs.get_reports(
+                start_millis=start,
+                device_ids=known_device_id,
+                limit=5,
+            )
+        )
+        data = api.call_with_retry(
+            lambda: api.logs.get_device_data(
+                start_millis=start,
+                device_ids=known_device_id,
+                limit=5,
+            )
+        )
+    except Exception as exc:  # noqa: BLE001
+        pytest.fail(scrub_secrets(f"logs convenience helpers failed: {exc!r}"))
+    assert isinstance(logs, list)
+    assert isinstance(reports, list)
+    assert isinstance(data, list)
+
+
 def test_logs_telemetry(api, known_imei):
     """GET /telemetrylogs - search recent telemetry for the known IMEI.
 
