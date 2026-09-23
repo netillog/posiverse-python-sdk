@@ -27,6 +27,31 @@ def _params(request: httpx.Request) -> tuple[list[str], list[str]]:
     )
 
 
+def test_list_device_validates_object_and_string_result(mock_api, client):
+    """GET /devicelogs accepts object result payloads and string results."""
+    mock_api.get("/devicelogs").mock(
+        return_value=httpx.Response(
+            200,
+            json=[
+                {
+                    "deviceId": "d1",
+                    "request": {"cmd": "ping"},
+                    "result": {"status": "ok"},
+                },
+                {"deviceId": "d2", "request": "raw", "result": "ok"},
+                {"deviceId": "d3", "request": None, "result": None},
+            ],
+        )
+    )
+    page = client.logs.list_device(start_millis=1, device_ids="d1")
+    assert page.items[0].result == {"status": "ok"}
+    assert page.items[0].request == {"cmd": "ping"}
+    assert page.items[1].result == "ok"
+    assert page.items[1].request == "raw"
+    assert page.items[2].result is None
+    assert page.items[2].request is None
+
+
 def test_get_logs_filters_config_and_logs_action(mock_api, client):
     """get_logs sends serviceIds=config and actions=logs on GET /devicelogs."""
     captured = {}
@@ -198,6 +223,9 @@ def test_report_identity_source_order_and_nulls():
         {"result": json.dumps({"ts": 9, "rpt": {"k": "v"}})}
     )
     assert ReportIdentity.extract(result_fallback) == (9, {"k": "v"})
+
+    object_result = DeviceLog.model_validate({"result": {"ts": 9, "rpt": {"k": "v"}}})
+    assert ReportIdentity.extract(object_result) == (9, {"k": "v"})
 
     extra_only = DeviceLog.model_validate({"service": "tel", "ts": 4, "rpt": "top"})
     assert ReportIdentity.extract(extra_only) == (4, "top")
