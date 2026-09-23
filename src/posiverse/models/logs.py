@@ -6,7 +6,7 @@ from sibling model modules. Extra API fields are preserved.
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional, Union
 
 from pydantic import Field
 
@@ -62,7 +62,9 @@ class DeviceLog(PosiverseModel):
     The OpenAPI schema does not define ``ts`` or ``rpt``. Report dedupe
     (:class:`posiverse.device_logs.ReportIdentity`) reads that pair from
     the parsed ``request`` JSON object, then ``result``, then extra
-    top-level fields.
+    top-level fields. OpenAPI types ``request`` and ``result`` as strings;
+    live ``GET /devicelogs`` may send either as a JSON object or null, and
+    both shapes are accepted.
     """
 
     deviceId: Optional[str] = Field(None, description="UUID of device")
@@ -88,10 +90,14 @@ class DeviceLog(PosiverseModel):
         None,
         description="A UUID that groups all database changes taken by a specific device action.  For example: a device that changes its VIN will cause change in device properties and potentially the device's settings and device's field vcmVehicleLibVer.",
     )
-    request: Optional[str] = Field(
+    # OpenAPI types these as string (JSON text). Live GET /devicelogs returns
+    # ``result`` as a JSON object or null. ``request`` has the same schema.
+    request: Optional[Union[str, dict[str, Any]]] = Field(
         None, description="The incoming JSON object representing the request to the system"
     )
-    result: Optional[str] = Field(None, description="The result of the request in JSON")
+    result: Optional[Union[str, dict[str, Any]]] = Field(
+        None, description="The result of the request in JSON"
+    )
     logs: Optional[List[ServerLog]] = Field(
         None, description="Specific logs from the handling of the action"
     )

@@ -15,9 +15,10 @@ Hypothesis — filter semantics
     of the log text, not field predicates, so they are not used here.
 
 Hypothesis — payload shape
-    ``DeviceLog`` has no ``ts`` or ``rpt`` properties. ``request`` and
-    ``result`` are strings described as JSON. Report identity is taken
-    from the first JSON *object* that contains both keys, non-null:
+    ``DeviceLog`` has no ``ts`` or ``rpt`` properties. OpenAPI types
+    ``request`` and ``result`` as JSON strings; live responses may send
+    either as a JSON object or null. Report identity is taken from the
+    first JSON *object* that contains both keys, non-null:
 
     1. ``request`` (the device payload)
     2. ``result``

@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from posiverse.models import (
     Device,
+    DeviceLog,
     Error,
     SettingsData,
     TagMapPut,
@@ -60,6 +61,40 @@ def test_error_schema_required_fields():
         Error(code=400)
     err = Error(code=404, message="missing")
     assert err.code == 404
+
+
+def test_device_log_result_and_request_accept_string_object_or_null():
+    """OpenAPI says string; live GET /devicelogs may return an object or null.
+
+    ``result`` is the field the live suite rejected. ``request`` uses the
+    same OpenAPI type, so it accepts the same shapes.
+    """
+    as_object = DeviceLog.model_validate(
+        {
+            "deviceId": "d1",
+            "request": {"imei": "123", "ts": 1, "rpt": {"b": 2, "a": 1}},
+            "result": {"ok": True, "n": 2, "nested": {"k": "v"}},
+        }
+    )
+    assert as_object.request == {"imei": "123", "ts": 1, "rpt": {"b": 2, "a": 1}}
+    assert as_object.result == {"ok": True, "n": 2, "nested": {"k": "v"}}
+    assert as_object.model_dump()["result"] == {"ok": True, "n": 2, "nested": {"k": "v"}}
+
+    empty_object = DeviceLog.model_validate({"result": {}, "request": {}})
+    assert empty_object.result == {}
+    assert empty_object.request == {}
+
+    as_string = DeviceLog.model_validate({"request": '{"ts":1}', "result": "diagnostic"})
+    assert as_string.request == '{"ts":1}'
+    assert as_string.result == "diagnostic"
+
+    as_null = DeviceLog.model_validate({"request": None, "result": None})
+    assert as_null.request is None
+    assert as_null.result is None
+
+    omitted = DeviceLog.model_validate({"deviceId": "d1"})
+    assert omitted.request is None
+    assert omitted.result is None
 
 
 def test_settings_data_extra_fields_allowed():
