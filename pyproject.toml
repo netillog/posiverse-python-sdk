@@ -44,12 +44,6 @@ dev = [
   "pip-audit>=2.7",
 ]
 
-[project.urls]
-Homepage = "https://github.com/netillog/posiverse-python-sdk"
-Repository = "https://github.com/netillog/posiverse-python-sdk"
-Documentation = "https://openapi-prod.posiverse.com"
-Changelog = "https://github.com/netillog/posiverse-python-sdk/releases"
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/posiverse"]
 
