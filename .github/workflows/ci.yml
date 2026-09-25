@@ -1,5 +1,7 @@
 name: CI
 
+# Publish surface. This branch has no test suite; mocked unit tests run on develop.
+
 on:
   push:
     branches: [main]
@@ -10,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  lint-and-test:
+  package:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -37,11 +39,11 @@ jobs:
           .venv/bin/pip freeze --exclude-editable | tee requirements-audit.txt
           python -m pip_audit --progress-spinner off --disable-pip --no-deps -r requirements-audit.txt
 
-      - name: Install test extras
-        run: .venv/bin/pip install -e ".[test]" build
+      - name: Install lint and build tools
+        run: .venv/bin/pip install ruff build twine
 
-      - name: Lint with ruff
-        run: .venv/bin/ruff check src tests
+      - name: Lint library sources
+        run: .venv/bin/ruff check src
 
       - name: Refuse test host in published library sources
         run: |
@@ -50,24 +52,84 @@ jobs:
             exit 1
           fi
 
-      - name: Run unit tests (mocked; no secrets; live marker excluded)
-        run: .venv/bin/pytest -q -m "not live"
-
-      - name: Build wheel and confirm it omits the test host
+      - name: Import smoke
         run: |
-          .venv/bin/python -m build --wheel
           .venv/bin/python - <<'PY'
+          from posiverse import PosiverseClient
+          from posiverse.config import DEFAULT_BASE_URL, PROD_BASE_URL, PosiverseConfig
+
+          assert PosiverseConfig.PRODUCTION_BASE_URL == "https://openapi-prod.posiverse.com"
+          assert PROD_BASE_URL == PosiverseConfig.PRODUCTION_BASE_URL
+          assert DEFAULT_BASE_URL == PROD_BASE_URL
+          assert PosiverseClient.__name__ == "PosiverseClient"
+          print("import smoke ok", PosiverseConfig.PRODUCTION_BASE_URL)
+          PY
+
+      - name: Build wheel and sdist
+        run: .venv/bin/python -m build
+
+      - name: Check distributions
+        run: .venv/bin/twine check dist/*
+
+      - name: Confirm wheel and sdist contents
+        run: |
+          .venv/bin/python - <<'PY'
+          import tarfile
           import zipfile
           from pathlib import Path
 
           needle = b"openapi-test.posiverse.com"
-          wheels = list(Path("dist").glob("*.whl"))
-          assert wheels, "no wheel built"
-          for wheel in wheels:
-              with zipfile.ZipFile(wheel) as archive:
-                  for name in archive.namelist():
-                      data = archive.read(name)
-                      if needle in data:
-                          raise SystemExit(f"test OpenAPI hostname found in {wheel.name}:{name}")
-          print("wheel omits test OpenAPI hostname")
+          forbidden_sdist = {
+              "tests",
+              "openapi",
+              "CONTRIBUTING.md",
+              "RELEASE.md",
+              ".env.example",
+              "requirements-dev.txt",
+              "requirements.txt",
+          }
+          wheels = sorted(Path("dist").glob("*.whl"))
+          sdists = sorted(Path("dist").glob("*.tar.gz"))
+          if len(wheels) != 1 or len(sdists) != 1:
+              raise SystemExit(f"expected one wheel and one sdist, got {wheels} {sdists}")
+
+          wheel = wheels[0]
+          with zipfile.ZipFile(wheel) as archive:
+              names = archive.namelist()
+              metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
+              if len(metadata_names) != 1:
+                  raise SystemExit(f"expected one METADATA, got {metadata_names}")
+              for name in names:
+                  top = name.split("/", 1)[0]
+                  if top != "posiverse" and not top.endswith(".dist-info"):
+                      raise SystemExit(f"unexpected wheel member {name}")
+                  if needle in archive.read(name):
+                      raise SystemExit(f"test OpenAPI hostname found in {wheel.name}:{name}")
+              metadata = archive.read(metadata_names[0]).decode()
+              if "Project-URL:" in metadata:
+                  raise SystemExit("wheel METADATA contains Project-URL")
+              if "Provides-Extra:" in metadata:
+                  raise SystemExit("wheel METADATA contains Provides-Extra")
+
+          sdist = sdists[0]
+          with tarfile.open(sdist, "r:gz") as archive:
+              members = [member.name for member in archive.getmembers() if member.isfile()]
+              pkg_info = [name for name in members if name.endswith("/PKG-INFO")]
+              if len(pkg_info) != 1:
+                  raise SystemExit(f"expected one PKG-INFO, got {pkg_info}")
+              for name in members:
+                  relative = name.split("/", 1)[1] if "/" in name else name
+                  parts = relative.split("/")
+                  if parts[0] in forbidden_sdist or relative in forbidden_sdist:
+                      raise SystemExit(f"sdist contains {relative}")
+                  extracted = archive.extractfile(name)
+                  if extracted is not None and needle in extracted.read():
+                      raise SystemExit(f"test OpenAPI hostname found in {sdist.name}:{name}")
+              pkg_info_text = archive.extractfile(pkg_info[0]).read().decode()
+              if "Project-URL:" in pkg_info_text:
+                  raise SystemExit("sdist PKG-INFO contains Project-URL")
+              if "Provides-Extra:" in pkg_info_text:
+                  raise SystemExit("sdist PKG-INFO contains Provides-Extra")
+
+          print("wheel is posiverse-only; sdist omits contributor files; metadata has no project URLs or extras")
           PY
