@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 
 import httpx
 import pytest
@@ -35,6 +36,56 @@ def test_api_key_from_env(monkeypatch, mock_api, base_url):
     with PosiverseClient(base_url=base_url) as client:
         client.tenants.list()
     assert route.calls.last.request.headers.get(AUTH_HEADER) == "env-key-value"
+
+
+def test_api_key_from_dotenv_when_env_unset(monkeypatch, mock_api, base_url, tmp_path):
+    """PosiverseClient() reads POSIVERSE_API_KEY from a project-root .env."""
+    import posiverse._env as env_module
+
+    monkeypatch.setattr(env_module, "_LOADED", False)
+    monkeypatch.setenv(API_KEY_ENV, "sentinel")
+    os.environ.pop(API_KEY_ENV, None)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'tmp'\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(f'{API_KEY_ENV}="dotenv-key"\n', encoding="utf-8")
+    route = mock_api.get("/tenants").mock(
+        return_value=httpx.Response(200, json=[], headers={"x-total-count": "0"})
+    )
+    with PosiverseClient(base_url=base_url) as client:
+        client.tenants.list()
+    assert route.calls.last.request.headers.get(AUTH_HEADER) == "dotenv-key"
+
+
+def test_base_url_from_dotenv_when_env_unset(monkeypatch, tmp_path):
+    """POSIVERSE_BASE_URL in .env applies when the process environment lacks it."""
+    import posiverse._env as env_module
+
+    monkeypatch.setattr(env_module, "_LOADED", False)
+    monkeypatch.setenv(BASE_URL_ENV, "sentinel")
+    os.environ.pop(BASE_URL_ENV, None)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        'POSIVERSE_BASE_URL="https://from-dotenv.example.invalid"\n',
+        encoding="utf-8",
+    )
+    with PosiverseClient(api_key="k") as client:
+        assert client.base_url == "https://from-dotenv.example.invalid"
+
+
+def test_shell_api_key_wins_over_dotenv(monkeypatch, mock_api, base_url, tmp_path):
+    """A key already in the environment is not replaced by .env."""
+    import posiverse._env as env_module
+
+    monkeypatch.setattr(env_module, "_LOADED", False)
+    monkeypatch.setenv(API_KEY_ENV, "shell-key")
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(f"{API_KEY_ENV}=dotenv-key\n", encoding="utf-8")
+    route = mock_api.get("/tenants").mock(
+        return_value=httpx.Response(200, json=[], headers={"x-total-count": "0"})
+    )
+    with PosiverseClient(base_url=base_url) as client:
+        client.tenants.list()
+    assert route.calls.last.request.headers.get(AUTH_HEADER) == "shell-key"
 
 
 def test_missing_api_key_raises(monkeypatch, base_url):

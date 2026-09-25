@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import BaseModel
 
+from posiverse._env import load_dotenv
 from posiverse._utils import drop_none, dump_json_body
 from posiverse._version import __version__
 from posiverse.config import (
@@ -79,6 +80,8 @@ class PosiverseClient:
     Args:
         api_key: Posiverse API key sent as the ``posiverse-auth-key`` header.
             When omitted, ``POSIVERSE_API_KEY`` is read from the environment.
+            A project-root ``.env`` file is loaded first when that variable
+            is unset; values already set in the shell or CI are not overwritten.
         base_url: API server URL. Defaults to production
             (``https://openapi-prod.posiverse.com``), or ``POSIVERSE_BASE_URL``
             when that environment variable is set. Must be https.
@@ -91,7 +94,8 @@ class PosiverseClient:
 
     Raises:
         ValueError: If no API key is provided and ``POSIVERSE_API_KEY`` is
-            unset, if the base URL is not https, or if ``timeout`` is None.
+            unset in the environment and in a project-root ``.env`` file,
+            if the base URL is not https, or if ``timeout`` is None.
     """
 
     def __init__(
@@ -103,11 +107,17 @@ class PosiverseClient:
         transport: Optional[httpx.BaseTransport] = None,
         http_client: Optional[httpx.Client] = None,
     ) -> None:
+        # Prefer an explicit api_key=; otherwise read POSIVERSE_API_KEY after
+        # loading a project-root .env (shell/CI values still win). Loading
+        # happens before base-URL resolution so POSIVERSE_BASE_URL in .env
+        # is visible too.
+        load_dotenv()
         if api_key is None:
             api_key = os.environ.get(API_KEY_ENV)
         if not api_key:
             raise ValueError(
-                "API key required: pass api_key=... or set the POSIVERSE_API_KEY environment variable"
+                "API key required: pass api_key=..., set POSIVERSE_API_KEY, "
+                "or put POSIVERSE_API_KEY=... in a project-root .env file"
             )
 
         self._base_url = PosiverseConfig.resolve_base_url(base_url)

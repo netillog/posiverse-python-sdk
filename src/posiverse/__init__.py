@@ -4,7 +4,7 @@ Quickstart::
 
     from posiverse import PosiverseClient
 
-    # API key via env POSIVERSE_API_KEY (or pass api_key=...)
+    # API key via POSIVERSE_API_KEY, a project-root .env, or pass api_key=...
     # Default base URL is production. Staff/bots may set POSIVERSE_BASE_URL.
     with PosiverseClient() as client:
         page = client.devices.list()
