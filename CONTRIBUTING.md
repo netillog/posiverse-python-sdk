@@ -8,6 +8,13 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+The same ranges are in `requirements.txt` (runtime) and `requirements-dev.txt` (those deps plus pytest, respx, ruff, and pip-audit). `pyproject.toml` is the source of truth.
+
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
 Copy `.env.example` to `.env` for local secrets. `.env` is gitignored — never commit API keys.
 
 ## Checks
@@ -23,7 +30,7 @@ deactivate
 python -m pip install pip-audit  # outside the project venv
 python -m pip_audit --disable-pip --no-deps -r requirements-audit.txt
 source .venv/bin/activate
-pip install -e ".[test]"
+pip install -e ".[test]"         # or: pip install -r requirements-dev.txt
 ruff check src tests
 pytest                           # mocked; live marker excluded
 ```

@@ -1,0 +1,7 @@
+# Test and dev tooling, flattened from [project.optional-dependencies] test and dev.
+# Same ranges as pyproject.toml, which remains the source of truth.
+-r requirements.txt
+pytest>=8.0
+respx>=0.21
+ruff>=0.6
+pip-audit>=2.7
