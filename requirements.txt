@@ -1,0 +1,6 @@
+# Runtime dependencies. Same ranges as [project].dependencies in pyproject.toml.
+# pyproject.toml is the source of truth; do not change versions here independently.
+httpx>=0.27
+pydantic>=2.0
+idna>=3.15
+anyio>=4.14.2

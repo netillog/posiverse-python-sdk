@@ -18,6 +18,13 @@ From a checkout:
 pip install -e ".[dev]"
 ```
 
+`requirements.txt` and `requirements-dev.txt` list the same ranges as `pyproject.toml` (the source of truth). `requirements-dev.txt` starts with `-r requirements.txt`, then pytest, respx, ruff, and pip-audit.
+
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
 ## Authentication
 
 Posiverse uses an API key in the **`posiverse-auth-key`** header (OpenAPI `bearerAuth` is an `apiKey` scheme, **not** HTTP Bearer).
@@ -128,6 +135,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the venv-scoped runtime `pip-audit` c
 
 ```bash
 pip install -e ".[test]"
+# same test tools, plus pip-audit: pip install -r requirements-dev.txt
 ruff check src tests
 pytest          # mocked unit tests; live marker is excluded by default
 ```
