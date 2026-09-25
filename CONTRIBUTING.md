@@ -8,7 +8,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-Copy `.env.example` to `.env` for local secrets. `.env` is gitignored — never commit API keys.
+Copy `.env.example` to `.env` for local secrets (`cp` on Linux/macOS, `Copy-Item` in PowerShell, `copy` in cmd). `PosiverseClient` and pytest load that file automatically; variables already set in the shell or CI are not overwritten. `.env` is gitignored — never commit API keys.
 
 ## Checks
 

@@ -12,7 +12,12 @@ import pytest
 import respx
 
 from posiverse import PROD_BASE_URL, PosiverseClient
+from posiverse._env import load_dotenv
 from posiverse.config import PosiverseConfig
+
+# Before live gates / API key checks (including import-time skipif).
+# Shell and CI values already in the environment are left unchanged.
+load_dotenv()
 
 FAKE_API_KEY = "test-api-key-not-a-secret"
 PROD_HOST = "openapi-prod.posiverse.com"

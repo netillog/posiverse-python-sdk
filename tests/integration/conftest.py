@@ -12,6 +12,7 @@ import os
 import pytest
 
 from posiverse import PosiverseClient
+from posiverse._env import load_dotenv
 from posiverse.config import PosiverseConfig
 from tests.integration.helpers import (
     KNOWN_TEST_DEVICE_ID,
@@ -23,6 +24,9 @@ from tests.integration.helpers import (
     load_release_mask,
 )
 from tests.live_guard import LiveTestGuard
+
+# Before live gate / API key checks in this module.
+load_dotenv()
 
 # Apply the live marker to every test under tests/integration/.
 pytestmark = pytest.mark.live
