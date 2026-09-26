@@ -4,7 +4,7 @@ Python SDK for the [Posiverse](https://www.positioninguniversal.com) OpenAPI (v1
 
 Built with **httpx** and **pydantic v2**. Requires Python 3.10 or newer. Covers all OpenAPI tags: Commands, Devices, Firmwares, Groups, Logs, Products, Settings, TagMaps, Tags, Tenants, Users, VirtualConsole.
 
-The OpenAPI document checked into this repository (`openapi/posiverse.openapi.json`) is the source of truth. The SDK does not invent endpoints beyond that spec.
+The SDK follows the Posiverse OpenAPI v1.1.1 and does not invent endpoints beyond that spec.
 
 Install from PyPI:
 
@@ -12,52 +12,11 @@ Install from PyPI:
 pip install posiverse
 ```
 
-From a checkout:
-
-```bash
-pip install -e ".[dev]"
-```
-
-`requirements.txt` and `requirements-dev.txt` list the same ranges as `pyproject.toml` (the source of truth). `requirements-dev.txt` starts with `-r requirements.txt`, then pytest, respx, ruff, and pip-audit.
-
-```bash
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-```
-
 ## Authentication
 
 Posiverse uses an API key in the **`posiverse-auth-key`** header (OpenAPI `bearerAuth` is an `apiKey` scheme, **not** HTTP Bearer).
 
-**Option A — project `.env` (recommended for local work)**
-
-Copy the example file and set `POSIVERSE_API_KEY` in it. `PosiverseClient()` and the live pytest suite load a project-root `.env` (searched from the working directory upward). Values already set in your shell or CI are left unchanged. `.env` is gitignored — never commit it.
-
-Linux / macOS:
-
-```bash
-cp .env.example .env
-# edit .env and set:
-# POSIVERSE_API_KEY=your-api-key
-```
-
-Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-# edit .env and set:
-# POSIVERSE_API_KEY=your-api-key
-```
-
-Windows Command Prompt:
-
-```cmd
-copy .env.example .env
-REM edit .env and set:
-REM POSIVERSE_API_KEY=your-api-key
-```
-
-**Option B — shell environment variable**
+Set `POSIVERSE_API_KEY` in your shell. Keys are available in the Posiverse UI under User Profile. Never commit API keys or paste them into logs.
 
 Linux / macOS (current session):
 
@@ -87,37 +46,15 @@ Windows PowerShell (persist for your user; new terminals pick it up):
 )
 ```
 
-Use a separate key for test vs production backends. Keys are available in the Posiverse UI under User Profile. Never commit API keys or paste them into logs.
+## Production client
 
-## Servers
-
-The client defaults to **production**: `https://openapi-prod.posiverse.com`.
+The client defaults to production. `PRODUCTION_BASE_URL` is `https://openapi-prod.posiverse.com`.
 
 ```python
 from posiverse import PosiverseClient
 
-with PosiverseClient() as client:  # production; key from the environment or a project .env
+with PosiverseClient() as client:  # production; key from POSIVERSE_API_KEY
     ...
-```
-
-Staff and bots that need a non-production OpenAPI host should set `POSIVERSE_BASE_URL` to their internal test OpenAPI base URL (https only), or pass `base_url=` to the client. The published package does not embed a test hostname. You can set `POSIVERSE_BASE_URL` in the project `.env` from Option A; leave it unset to keep the production default.
-
-Linux / macOS (current session):
-
-```bash
-export POSIVERSE_BASE_URL="https://your-internal-test-openapi.example"
-```
-
-Windows PowerShell (current session):
-
-```powershell
-$env:POSIVERSE_BASE_URL = "https://your-internal-test-openapi.example"
-```
-
-Windows Command Prompt (current session):
-
-```cmd
-set POSIVERSE_BASE_URL=https://your-internal-test-openapi.example
 ```
 
 HTTP URLs are rejected. TLS verification and request timeouts are on by default and cannot be turned off through the client constructor.
@@ -127,7 +64,7 @@ HTTP URLs are rejected. TLS verification and request timeouts are on by default 
 ```python
 from posiverse import PosiverseClient
 
-# Uses POSIVERSE_API_KEY (environment or project .env) and defaults to production
+# Uses POSIVERSE_API_KEY from the environment and defaults to production
 with PosiverseClient() as client:
     page = client.devices.list()
     print(page.total_count, page.page_count, page.page_start, page.next_page_url)
@@ -195,95 +132,9 @@ Walk pages with `client.follow_next_page(page, item_model)` or `client.iter_page
 
 This package follows [Semantic Versioning](https://semver.org/). `0.1.0` is the first public PyPI release. While the major version is `0`, minor bumps may include breaking changes; patch bumps are bug fixes. `1.0.0` will mark a stable public API. See [RELEASE.md](RELEASE.md) for the publish checklist.
 
-## Development
+## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the venv-scoped runtime `pip-audit` command. Local unit tests:
-
-```bash
-pip install -e ".[test]"
-# same test tools, plus pip-audit: pip install -r requirements-dev.txt
-ruff check src tests
-pytest          # mocked unit tests; live marker is excluded by default
-```
-
-Unit tests use **respx** mocks — no secrets and no production calls. The default pytest config excludes the `live` marker (`addopts = -m "not live"`), so CI stays mocked.
-
-### Live smoke / integration
-
-Live tests are env-gated and **never default to production**. They require `POSIVERSE_BASE_URL` (your internal test OpenAPI base URL) and refuse the production host.
-
-| Flag | Purpose |
-|------|---------|
-| `POSIVERSE_LIVE_SMOKE=1` | Enable the minimal smoke test in `tests/test_live_smoke.py` |
-| `POSIVERSE_LIVE_INTEGRATION=1` | Enable the full per-tag suite under `tests/integration/` (also enables smoke) |
-| `POSIVERSE_API_KEY` | Required for any live run (sent as `posiverse-auth-key`) |
-| `POSIVERSE_BASE_URL` | Required for any live run; https only; production is refused |
-
-Linux / macOS:
-
-```bash
-# Mocked unit tests (default CI)
-pytest
-
-# Full live integration against an internal test OpenAPI
-# (or set the same keys in a project-root .env — see Authentication)
-POSIVERSE_LIVE_INTEGRATION=1 POSIVERSE_API_KEY=... POSIVERSE_BASE_URL=... pytest -m live -v --tb=short
-
-# Smoke only
-POSIVERSE_LIVE_SMOKE=1 POSIVERSE_API_KEY=... POSIVERSE_BASE_URL=... pytest -m live tests/test_live_smoke.py
-
-# With .env already containing POSIVERSE_API_KEY, POSIVERSE_BASE_URL, and a live gate:
-pytest -m live -v --tb=short
-```
-
-Windows PowerShell:
-
-```powershell
-# Mocked unit tests (default CI)
-pytest
-
-# Full live integration against an internal test OpenAPI
-# (or set the same keys in a project-root .env — see Authentication)
-$env:POSIVERSE_LIVE_INTEGRATION = "1"
-$env:POSIVERSE_API_KEY = "..."
-$env:POSIVERSE_BASE_URL = "https://your-internal-test-openapi.example"
-pytest -m live -v --tb=short
-
-# Smoke only
-$env:POSIVERSE_LIVE_SMOKE = "1"
-$env:POSIVERSE_API_KEY = "..."
-$env:POSIVERSE_BASE_URL = "https://your-internal-test-openapi.example"
-pytest -m live tests/test_live_smoke.py
-
-# With .env already containing POSIVERSE_API_KEY, POSIVERSE_BASE_URL, and a live gate:
-pytest -m live -v --tb=short
-```
-
-Windows Command Prompt:
-
-```cmd
-REM Mocked unit tests (default CI)
-pytest
-
-REM Full live integration against an internal test OpenAPI
-set POSIVERSE_LIVE_INTEGRATION=1
-set POSIVERSE_API_KEY=...
-set POSIVERSE_BASE_URL=https://your-internal-test-openapi.example
-pytest -m live -v --tb=short
-
-REM Smoke only
-set POSIVERSE_LIVE_SMOKE=1
-set POSIVERSE_API_KEY=...
-set POSIVERSE_BASE_URL=https://your-internal-test-openapi.example
-pytest -m live tests/test_live_smoke.py
-
-REM With .env already containing POSIVERSE_API_KEY, POSIVERSE_BASE_URL, and a live gate:
-pytest -m live -v --tb=short
-```
-
-Settings write coverage uses the known test device and constraints from `tests/integration/fixtures/Release.json` (mask keys: ver, config, analytics, telemetry, ota, motion, vehicle, driverBehavior, driverId, bluetooth). Prior values are restored when practical. Irreversible deletes (tenants/users/devices) and destructive device commands (for example `reset`) are skipped.
-
-OpenAPI source of truth: `openapi/posiverse.openapi.json`.
+Library development lives on the [`develop`](https://github.com/netillog/posiverse-python-sdk/tree/develop) branch. See `CONTRIBUTING.md` there.
 
 ## License
 

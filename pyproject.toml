@@ -33,49 +33,23 @@ dependencies = [
   "anyio>=4.14.2",
 ]
 
-[project.optional-dependencies]
-test = [
-  "pytest>=8.0",
-  "respx>=0.21",
-  "ruff>=0.6",
-]
-dev = [
-  "posiverse[test]",
-  "pip-audit>=2.7",
-]
-
-[project.urls]
-Homepage = "https://github.com/netillog/posiverse-python-sdk"
-Repository = "https://github.com/netillog/posiverse-python-sdk"
-Documentation = "https://openapi-prod.posiverse.com"
-Changelog = "https://github.com/netillog/posiverse-python-sdk/releases"
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/posiverse"]
 
+# Publish surface. Hatchling also force-includes pyproject.toml (and the
+# configured readme and license files). Contributor trees stay on develop
+# and are not listed here, so they are not shipped in the sdist.
 [tool.hatch.build.targets.sdist]
 include = [
   "/src",
-  "/openapi",
-  "/tests",
   "/README.md",
   "/LICENSE",
-  "/CONTRIBUTING.md",
-  "/RELEASE.md",
 ]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
-markers = [
-  "live: optional live tests; require POSIVERSE_BASE_URL and refuse production (excluded by default)",
-]
-addopts = ["-m", "not live"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["src", "tests"]
+src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
