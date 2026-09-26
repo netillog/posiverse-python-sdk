@@ -108,8 +108,20 @@ def test_publish_workflow_uses_oidc_not_tokens():
     workflow = (REPO_ROOT / ".github" / "workflows" / "publish.yml").read_text(encoding="utf-8")
     assert "id-token: write" in workflow
     assert "pypa/gh-action-pypi-publish" in workflow
+    assert "environment:" in workflow
+    assert "name: pypi" in workflow
     assert "password:" not in workflow.lower()
     assert "PYPI_API_TOKEN" not in workflow
+
+
+def test_publish_workflow_is_off_until_explicitly_enabled():
+    """Upload stays off until the owner flips ENABLE_PYPI_PUBLISH in a dedicated PR."""
+    workflow = (REPO_ROOT / ".github" / "workflows" / "publish.yml").read_text(encoding="utf-8")
+    assert 'ENABLE_PYPI_PUBLISH: "false"' in workflow
+    assert 'ENABLE_PYPI_PUBLISH: "true"' not in workflow
+    assert "\n  release:" not in workflow
+    assert "types: [published]" not in workflow
+    assert "needs.guard.outputs.enabled == 'true'" in workflow
 
 
 def test_release_docs_exist():
@@ -121,5 +133,8 @@ def test_release_docs_exist():
     assert "do not" in release.lower()
     assert "token" in release.lower()
     assert "Semantic Versioning" in release or "SemVer" in release
+    assert "ENABLE_PYPI_PUBLISH" in release
+    assert "develop" in release and "main" in release
+    assert "does not run pytest" in release
     assert "POSIVERSE_BASE_URL" in contributing
     assert "pip-audit" in contributing
