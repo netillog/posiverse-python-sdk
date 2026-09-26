@@ -6,7 +6,16 @@ Built with **httpx** and **pydantic v2**. Requires Python 3.10 or newer. Covers 
 
 The SDK follows the Posiverse OpenAPI v1.1.1 and does not invent endpoints beyond that spec.
 
-Install from PyPI:
+This package is **not on PyPI yet**. Install from a clone of `main`:
+
+```bash
+git clone https://github.com/netillog/posiverse-python-sdk.git
+cd posiverse-python-sdk
+git checkout main
+pip install .
+```
+
+After the first PyPI release:
 
 ```bash
 pip install posiverse
