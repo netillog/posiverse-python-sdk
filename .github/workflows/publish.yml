@@ -1,18 +1,87 @@
 name: Publish
 
+# PyPI upload is off until the owner sets ENABLE_PYPI_PUBLISH to "true"
+# in a dedicated pull request. That env var in the guard job is the only switch.
+#
+# Safe by default:
+# - There is no release trigger. Publishing a GitHub Release does not upload.
+# - workflow_dispatch builds and checks the artifact. The publish job is
+#   skipped while ENABLE_PYPI_PUBLISH is "false", so the pypi environment is
+#   not requested and no OIDC token is minted.
+# - The build fails unless the ref is main, or a tag whose commit is contained
+#   in main. develop and every other branch are refused.
+# - The build fails if the sdist contains tests, openapi, CONTRIBUTING,
+#   RELEASE, .env.example, or requirements*, or if METADATA / PKG-INFO
+#   contains Provides-Extra or Project-URL. Fat develop artifacts are refused.
+#
+# Re-enable: in a dedicated PR, change ENABLE_PYPI_PUBLISH from "false" to
+# "true" in the guard job below. Merge that to main, then run this workflow
+# with workflow_dispatch on main (or on a tag of a commit on main). Do not
+# publish from develop. Do not add a release trigger in that PR; dispatch on
+# an allowed ref is the upload path.
+
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.flag.outputs.enabled }}
+    steps:
+      - name: Read ENABLE_PYPI_PUBLISH
+        id: flag
+        env:
+          # Owner re-enable: change "false" to "true" in a dedicated PR.
+          # This is the only upload switch.
+          ENABLE_PYPI_PUBLISH: "false"
+        run: |
+          set -eu
+          case "$ENABLE_PYPI_PUBLISH" in
+            true)
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+              echo "ENABLE_PYPI_PUBLISH=true; the publish job may upload."
+              ;;
+            false)
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "ENABLE_PYPI_PUBLISH=false; the publish job will not upload."
+              ;;
+            *)
+              echo "Refusing unrecognized ENABLE_PYPI_PUBLISH value." >&2
+              exit 1
+              ;;
+          esac
+
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refuse refs other than main or a tag of a main commit
+        env:
+          REF_NAME: ${{ github.ref }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -eu
+          git fetch origin main
+          if [ "$REF_NAME" = "refs/heads/main" ]; then
+            echo "Ref is main."
+            exit 0
+          fi
+          if [ "$REF_TYPE" = "tag" ] && git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "Tag commit is contained in main."
+            exit 0
+          fi
+          echo "Refusing ${REF_NAME} (${REF_TYPE}). Publish candidates must be main or a tag of a commit on main." >&2
+          exit 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,6 +99,74 @@ jobs:
       - name: Check distributions
         run: twine check dist/*
 
+      - name: Refuse fat or develop artifacts
+        run: |
+          python - <<'PY'
+          import tarfile
+          import zipfile
+          from fnmatch import fnmatch
+          from pathlib import Path
+
+          FORBIDDEN_TOP = {"tests", "openapi"}
+          FORBIDDEN_NAMES = {
+              "CONTRIBUTING",
+              "CONTRIBUTING.md",
+              "RELEASE",
+              "RELEASE.md",
+              ".env.example",
+          }
+          FORBIDDEN_HEADERS = ("Provides-Extra:", "Project-URL:")
+
+          def forbidden_relative(relative: str) -> str | None:
+              parts = relative.split("/")
+              if parts[0] in FORBIDDEN_TOP:
+                  return relative
+              for part in parts:
+                  if part in FORBIDDEN_NAMES or fnmatch(part, "requirements*"):
+                      return relative
+              return None
+
+          def refuse_metadata(label: str, text: str) -> None:
+              for header in FORBIDDEN_HEADERS:
+                  if header in text:
+                      raise SystemExit(f"{label} contains {header[:-1]}")
+
+          wheels = sorted(Path("dist").glob("*.whl"))
+          sdists = sorted(Path("dist").glob("*.tar.gz"))
+          if len(wheels) != 1 or len(sdists) != 1:
+              raise SystemExit(f"expected one wheel and one sdist, got {wheels} {sdists}")
+
+          wheel = wheels[0]
+          with zipfile.ZipFile(wheel) as archive:
+              metadata_names = [
+                  name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
+              ]
+              if len(metadata_names) != 1:
+                  raise SystemExit(f"expected one METADATA, got {metadata_names}")
+              refuse_metadata(
+                  f"{wheel.name}:{metadata_names[0]}",
+                  archive.read(metadata_names[0]).decode(),
+              )
+
+          sdist = sdists[0]
+          with tarfile.open(sdist, "r:gz") as archive:
+              members = [member.name for member in archive.getmembers() if member.isfile()]
+              pkg_info = [name for name in members if name.endswith("/PKG-INFO")]
+              if len(pkg_info) != 1:
+                  raise SystemExit(f"expected one PKG-INFO, got {pkg_info}")
+              for name in members:
+                  relative = name.split("/", 1)[1] if "/" in name else name
+                  hit = forbidden_relative(relative)
+                  if hit:
+                      raise SystemExit(f"sdist contains {hit}")
+              extracted = archive.extractfile(pkg_info[0])
+              if extracted is None:
+                  raise SystemExit(f"could not read {pkg_info[0]}")
+              refuse_metadata(f"{sdist.name}:{pkg_info[0]}", extracted.read().decode())
+
+          print("sdist is slim; metadata has no Provides-Extra or Project-URL")
+          PY
+
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -37,7 +174,8 @@ jobs:
           path: dist/
 
   publish:
-    needs: build
+    needs: [guard, build]
+    if: needs.guard.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -45,6 +183,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      actions: read
     steps:
       - name: Download dist artifacts
         uses: actions/download-artifact@v4
@@ -53,5 +192,6 @@ jobs:
           path: dist/
 
       # Trusted Publishing / OIDC — no PyPI username, stored token, or API key.
+      # Reached only after ENABLE_PYPI_PUBLISH is set to "true" in the guard job.
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
