@@ -6,13 +6,7 @@ Built with **httpx** and **pydantic v2**. Requires Python 3.10 or newer. Covers 
 
 The OpenAPI document checked into this repository (`openapi/posiverse.openapi.json`) is the source of truth. The SDK does not invent endpoints beyond that spec.
 
-Install from PyPI:
-
-```bash
-pip install posiverse
-```
-
-From a checkout:
+This package is **not on PyPI yet**. From a checkout of `develop`:
 
 ```bash
 pip install -e ".[dev]"
@@ -23,6 +17,12 @@ pip install -e ".[dev]"
 ```bash
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
+```
+
+After the first PyPI release:
+
+```bash
+pip install posiverse
 ```
 
 ## Authentication
