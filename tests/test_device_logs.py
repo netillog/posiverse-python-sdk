@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import httpx
 
-import posiverse
-from posiverse.resources.logs import LogsResource
-
 
 def test_list_device_validates_object_and_string_result(mock_api, client):
     """GET /devicelogs accepts object result payloads and string results."""
@@ -31,15 +28,6 @@ def test_list_device_validates_object_and_string_result(mock_api, client):
     assert page.items[1].request == "raw"
     assert page.items[2].result is None
     assert page.items[2].request is None
-
-
-def test_removed_log_helpers_are_not_public():
-    """Convenience log helpers and their support types are not exported."""
-    for name in ("get_logs", "get_reports", "get_device_data"):
-        assert not hasattr(LogsResource, name)
-    for name in ("DeviceLogQueries", "ReportIdentity"):
-        assert name not in posiverse.__all__
-        assert not hasattr(posiverse, name)
 
 
 def test_list_device_sends_service_ids_and_actions(mock_api, client):

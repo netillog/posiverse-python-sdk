@@ -149,9 +149,11 @@ List endpoints return a `PaginatedResponse` with items plus headers:
 
 Walk pages with `client.follow_next_page(page, item_model)` or `client.iter_pages(...)`.
 
-### Device logs
+### Logs
 
 `client.logs.list_device` calls `GET /devicelogs` (operation `getDeviceLogs`). Pass `service_ids` and `actions` to filter (`serviceIds` and `actions` on the query string). Provide exactly one of `imeis` or `device_ids`. Each call returns one page. Walk further pages with `client.follow_next_page(page, DeviceLog)` or `client.iter_pages(...)`.
+
+`client.logs.list_telemetry` calls `GET /telemetrylogs`. `client.logs.list_user` calls `GET /userlogs`. Both take `start_millis` and an optional `limit`. Telemetry search can filter by `imeis`; user search can filter by `user_ids`, `service_ids`, and `actions`.
 
 ```python
 page = client.logs.list_device(
