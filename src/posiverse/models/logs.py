@@ -59,11 +59,8 @@ class TelemetryLog(PosiverseModel):
 class DeviceLog(PosiverseModel):
     """A data record class that contains information about a device log.
 
-    The OpenAPI schema does not define ``ts`` or ``rpt``. Report dedupe
-    (:class:`posiverse.device_logs.ReportIdentity`) reads that pair from
-    the parsed ``request`` JSON object, then ``result``, then extra
-    top-level fields. OpenAPI types ``request`` and ``result`` as strings;
-    live ``GET /devicelogs`` may send either as a JSON object or null, and
+    OpenAPI types ``request`` and ``result`` as strings. Live
+    ``GET /devicelogs`` may send either as a JSON object or null, and
     both shapes are accepted.
     """
 

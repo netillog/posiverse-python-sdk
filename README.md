@@ -149,19 +149,19 @@ List endpoints return a `PaginatedResponse` with items plus headers:
 
 Walk pages with `client.follow_next_page(page, item_model)` or `client.iter_pages(...)`.
 
-### Device logs, reports, and device data
+### Device logs
 
-`client.logs.get_logs`, `get_reports`, and `get_device_data` wrap `GET /devicelogs` (`list_device`). They do not add endpoints.
+`client.logs.list_device` calls `GET /devicelogs` (operation `getDeviceLogs`). Pass `service_ids` and `actions` to filter (`serviceIds` and `actions` on the query string). Provide exactly one of `imeis` or `device_ids`. Each call returns one page. Walk further pages with `client.follow_next_page(page, DeviceLog)` or `client.iter_pages(...)`.
 
-| Method | Query clauses (`serviceIds` / `actions`) |
-|--------|------------------------------------------|
-| `get_logs` | `config` / `logs` |
-| `get_reports` | `tel` / *(omitted)*, then `conn` / `new-sent`, `retry-sent` |
-| `get_device_data` | the union of those clauses |
-
-`GET /devicelogs` has no boolean filter parameter. `serviceIds` and `actions` are sent as separate conjunctive requests and merged in the client. Each clause follows `x-next-page-url`. `limit` applies to the first request of each clause.
-
-`get_reports` and `get_device_data` keep one row per `ts` + `rpt` pair. Those names are not `DeviceLog` schema fields. The SDK reads them from the `request` JSON object, then `result`, then extra top-level fields (`ReportIdentity`). Rows without both keys are kept. When two report rows share the pair and differ elsewhere, the earlier merged row is kept: `tel` before `conn`, and config logs before reports.
+```python
+page = client.logs.list_device(
+    start_millis=1_700_000_000_000,
+    imeis="123456789012345",
+    service_ids=["config"],
+    actions=["logs"],
+    limit=100,
+)
+```
 
 ### Errors
 
@@ -182,7 +182,7 @@ Walk pages with `client.follow_next_page(page, item_model)` or `client.iter_page
 | `client.devices` | Devices | list / get / update, plus properties, scratchpad, settings synched |
 | `client.firmwares` | Firmwares | list / get |
 | `client.groups` | Groups | list / get / update |
-| `client.logs` | Logs | `list_device` / `list_telemetry` / `list_user`, plus `get_logs` / `get_reports` / `get_device_data` |
+| `client.logs` | Logs | `list_device` / `list_telemetry` / `list_user` |
 | `client.products` | Products | list / get |
 | `client.settings` | Settings | get / update |
 | `client.tagmaps` | TagMaps | list / get / create / update / delete |
