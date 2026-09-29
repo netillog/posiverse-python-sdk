@@ -1,0 +1,144 @@
+{
+  "console_new_path": {
+    "count": 0,
+    "item": null,
+    "ok": true
+  },
+  "console_old_query_path": {
+    "count": 0,
+    "ok": true
+  },
+  "device_get": {
+    "extra": [],
+    "ok": true,
+    "present": [
+      "bluetoothFwVer",
+      "checkinDate",
+      "createdDate",
+      "externalDeviceId",
+      "gpsFwVer",
+      "groupId",
+      "iccid",
+      "id",
+      "imei",
+      "imsi",
+      "isVcmStatic",
+      "mainFwVer",
+      "modemFwVer",
+      "modifiedDate",
+      "name",
+      "productId",
+      "propertiesDate",
+      "propertiesVer",
+      "serial",
+      "settingsDate",
+      "settingsSynchedDate",
+      "settingsVer",
+      "vcmFwVer",
+      "vcmProtocolId",
+      "vcmProtocolId2",
+      "vcmVehicleId"
+    ],
+    "vcm_kinds": {
+      "isVcmStatic": "bool",
+      "vcmProtocolId": "str",
+      "vcmProtocolId2": "str",
+      "vcmVehicleId": "str"
+    }
+  },
+  "device_logs": {
+    "count": 1,
+    "item": {
+      "action": {
+        "kind": "str"
+      },
+      "database": {
+        "kind": "str"
+      },
+      "date": {
+        "kind": "int",
+        "time_scale": "millis-scale"
+      },
+      "deviceId": {
+        "kind": "str"
+      },
+      "imei": {
+        "kind": "str"
+      },
+      "logs": {
+        "kind": "array"
+      },
+      "result": {
+        "kind": "object"
+      },
+      "service": {
+        "kind": "str"
+      },
+      "status": {
+        "kind": "str"
+      }
+    },
+    "ok": true
+  },
+  "device_logs_no_identity": {
+    "message": "[400] 400: deviceIds or imeis not provided",
+    "ok": false,
+    "status": 400
+  },
+  "device_logs_omitted_start": {
+    "ok": true
+  },
+  "devices_by_tag": {
+    "message": "[400] 400: Unknown column 'tm.id' in 'on clause'",
+    "ok": false,
+    "status": 400
+  },
+  "devices_list_page": {
+    "count": 293,
+    "next": null,
+    "ok": true
+  },
+  "pages_get": {
+    "message": "no next page header",
+    "ok": false
+  },
+  "settings_synched": {
+    "errors_kind": "object",
+    "extra": [],
+    "ok": true,
+    "present": [
+      "data",
+      "errors",
+      "synchDate",
+      "ver"
+    ],
+    "ver_present": true
+  },
+  "telemetry_logs": {
+    "count": 0,
+    "item": null,
+    "ok": true
+  },
+  "user_get": {
+    "extra": [],
+    "language_kind": "str",
+    "ok": true,
+    "present": [
+      "createdDate",
+      "description",
+      "id",
+      "language",
+      "lastActivityDate",
+      "modifiedDate",
+      "name",
+      "state",
+      "stateStartDate",
+      "units"
+    ]
+  },
+  "user_logs": {
+    "count": 0,
+    "item": null,
+    "ok": true
+  }
+}
