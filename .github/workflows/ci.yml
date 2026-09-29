@@ -22,6 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Main-only: this step must not be copied to develop's ci.yml.
+      - name: Guard: develop-only paths must not exist on main
+        shell: bash
+        run: |
+          shopt -s nullglob
+          bad=0
+          for p in openapi tests RELEASE.md CONTRIBUTING.md docs .env.example requirements*.txt; do
+            if [ -e "$p" ]; then echo "::error::$p must not exist on main (develop-only)"; bad=1; fi
+          done
+          exit $bad
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
