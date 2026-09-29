@@ -83,15 +83,22 @@ user logs (0), new-path console lines (0).
   the column exists. SDK `client.devices.list(tag_id=…)` is correct per spec;
   the failure is backend.
 
-### 2. `GET /devicelogs` without `imeis` and without `deviceIds` is 400
+### 2. `GET /devicelogs` schema allows sending neither `imeis` nor `deviceIds`; TEST returns 400
 
-- **Expected (spec):** both `imeis` and `deviceIds` are `required: false`; text
-  only says at most one of them may be provided.
-- **Actual (TEST):** HTTP **400** —
+- **Spec today:** the `imeis` and `deviceIds` parameter descriptions already say
+  "Only one of imeis or deviceIds can be provided". The gap is that both are
+  `required: false`, so the schema permits a request that sends neither.
+- **Actual (TEST):** omitting both returns HTTP **400** —
   `deviceIds or imeis not provided`.
-- **Recommend:** Document that **exactly one** of `imeis` or `deviceIds` is
-  required (or make one of them `required: true` with a oneOf/XOR description).
-  Current wording understates the live rule.
+- **Recommend:** Document that **exactly one of `imeis` or `deviceIds` is
+  required**, e.g. in the `getDeviceLogs` operation description (and both
+  parameter descriptions). OpenAPI 3.0 cannot natively express
+  "mutually exclusive but one required" across separate query parameters
+  (`required` is per parameter; `oneOf`/`required` rules apply to schemas, not
+  to a set of parameters), so state it in prose, or model the pair as a single
+  object-typed query parameter (`style: form`, `explode: true`) whose schema is
+  a `oneOf` of `required: [imeis]` / `required: [deviceIds]`. Tooling support
+  for that second option is uneven.
 
 ### 3. Old virtual-console GET still answers on TEST (undocumented)
 
@@ -135,7 +142,7 @@ user logs (0), new-path console lines (0).
 ## Suggested owner follow-ups (priority)
 
 1. **P0:** Fix or document `GET /devices?tagId=` (SQL `tm.id` 400).
-2. **P1:** Clarify OpenAPI that device-log queries require one of `imeis` /
-   `deviceIds`.
+2. **P1:** Document on `getDeviceLogs` that exactly one of `imeis` / `deviceIds` is
+   required (both are `required: false` today; TEST returns 400 when neither is sent).
 3. **P2:** Decide fate of legacy `GET /virtualconsole/{deviceId}?lastDate=`.
 4. **P3:** Re-run probe when pagination / telemetry / console samples exist.
