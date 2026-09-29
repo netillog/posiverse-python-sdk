@@ -71,6 +71,10 @@ class Device(PosiverseModel):
     vcmFwVer: Optional[str] = Field(
         None, description="Current reported version of VCM module firmware on device"
     )
+    isVcmStatic: Optional[bool] = Field(None, description="Whether VCM is statically assigned")
+    vcmProtocolId: Optional[str] = Field(None, description="UUID of primary VCM protocol")
+    vcmProtocolId2: Optional[str] = Field(None, description="UUID of secondary VCM protocol")
+    vcmVehicleId: Optional[str] = Field(None, description="UUID of VCM vehicle configuration")
     scratchpad: Optional[Scratchpad] = Field(
         None,
         description="The latest scratchpad reported for a device, only returned when full version of device is requested",
@@ -104,3 +108,7 @@ class DevicePut(PosiverseModel):
     externalDeviceId: Optional[str] = Field(
         None, description="An external device ID. This field is limited to 64 characters."
     )
+    isVcmStatic: Optional[bool] = Field(None, description="Whether VCM is statically assigned")
+    vcmProtocolId: Optional[str] = Field(None, description="UUID of primary VCM protocol")
+    vcmProtocol2Id: Optional[str] = Field(None, description="UUID of secondary VCM protocol")
+    vcmVehicleId: Optional[str] = Field(None, description="UUID of VCM vehicle configuration")

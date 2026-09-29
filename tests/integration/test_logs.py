@@ -31,7 +31,8 @@ def test_logs_device(api, known_device_id, known_imei):
         known_device_id: Known TEST device UUID.
         known_imei: Known TEST device IMEI.
     """
-    # Live TEST API expects millis for startMillis (OpenAPI text says seconds).
+    # OpenAPI startMillis/endMillis are UTC millis. Window must be <= 30 days
+    # and startMillis is limited to the past 365 days.
     start = _window_start_millis(14)
     try:
         page = api.call_with_retry(

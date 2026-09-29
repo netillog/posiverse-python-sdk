@@ -2,13 +2,13 @@
 
 Paths:
     GET ``/devices``, GET/PUT ``/devices/{deviceId}``,
-    GET ``/properties/{deviceId}``, GET ``/scratchpads/{deviceId}``,
+    GET ``/properties/{deviceId}``, GET/DELETE ``/scratchpads/{deviceId}``,
     GET ``/settingssynched/{deviceId}``.
 """
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 from posiverse.models import Device, DevicePut, Properties, Scratchpad, SettingsSynched
 from posiverse.pagination import PaginatedResponse
@@ -23,6 +23,7 @@ class DevicesResource(BaseResource):
         *,
         full: Optional[bool] = None,
         group_id: Optional[str] = None,
+        tag_id: Optional[str] = None,
         imei: Optional[str] = None,
         tenant_id: Optional[str] = None,
     ) -> PaginatedResponse[Device]:
@@ -32,6 +33,7 @@ class DevicesResource(BaseResource):
             full: When True, include nested settings, settingsSynched,
                 properties, scratchpad, and full description (larger payload).
             group_id: Restrict results to devices in this group UUID.
+            tag_id: Restrict results to devices associated with this tag UUID.
             imei: Search for a device by IMEI.
             tenant_id: Alternate tenant UUID. Defaults to the account tenant.
 
@@ -51,6 +53,7 @@ class DevicesResource(BaseResource):
             params={
                 "full": full,
                 "groupId": group_id,
+                "tagId": tag_id,
                 "imei": imei,
                 "tenantId": tenant_id,
             },
@@ -86,7 +89,8 @@ class DevicesResource(BaseResource):
         Args:
             device_id: Device UUID.
             body: :class:`~posiverse.models.device.DevicePut` or dict of
-                mutable fields (groupId, name, description, externalDeviceId).
+                mutable fields (groupId, name, description, externalDeviceId,
+                isVcmStatic, vcmProtocolId, vcmProtocol2Id, vcmVehicleId).
 
         Raises:
             NotFoundError: Device not found.
@@ -136,6 +140,26 @@ class DevicesResource(BaseResource):
         """
         data = self._client.request_json("GET", f"/scratchpads/{device_id}")
         return Scratchpad.model_validate(data)
+
+    def delete_scratchpad_keys(self, device_id: str, keys: Sequence[str]) -> None:
+        """Remove keys from a device scratchpad (operation ``deleteScratchpadKeys``).
+
+        Args:
+            device_id: Device UUID.
+            keys: Scratchpad key names to remove. Sent as a JSON array.
+
+        Raises:
+            NotFoundError: Device not found.
+            AuthenticationError: Invalid or missing API key.
+            ForbiddenError: Insufficient permissions.
+            BadRequestError: Invalid request.
+            RateLimitError: Rate limited.
+        """
+        self._client.request(
+            "DELETE",
+            f"/scratchpads/{device_id}",
+            json=list(keys),
+        )
 
     def get_settings_synched(self, device_id: str) -> SettingsSynched:
         """Get settings last synched from a device (operation ``getSettingsSynched``).

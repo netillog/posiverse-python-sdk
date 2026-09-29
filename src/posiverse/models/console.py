@@ -14,12 +14,13 @@ from posiverse.models.base import PosiverseModel
 
 
 class ConsoleLine(PosiverseModel):
-    """A command that can be queued against a device and will get executed when device is connected to network"""
+    """An output line emitted by a device's virtual console"""
 
     date: Optional[int] = Field(
-        None, description="Date the device printed console line in UTC seconds since 1970-01-01"
+        None, description="Date the device printed console line in UTC millis since 1970-01-01"
     )
     idx: Optional[int] = Field(
-        None, description="Unique integer for each command.  Incremented by 1 for each new line."
+        None,
+        description="Unique integer for each console line. Incremented by 1 for each new line.",
     )
     data: Optional[str] = Field(None, description="A line of console text")

@@ -6,7 +6,7 @@ from sibling model modules. Extra API fields are preserved.
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from pydantic import Field
 
@@ -99,19 +99,16 @@ class SettingsAnalytics(PosiverseModel):
 class SettingsSynched(PosiverseModel):
     """The actual settings on a device"""
 
-    version: Optional[int] = Field(
-        None, description="The version of the settings that have been synched"
-    )
-    # Live API currently returns ``ver`` (OpenAPI documents ``version``).
     ver: Optional[int] = Field(
-        None, description="Live-API alias for the synched settings version"
+        None, description="The version of the settings that have been synched"
     )
     data: Optional[SettingsData] = Field(
         None,
         description="The actual settings synched from device.  There may be a difference between Settings specified for a device and the SettingsSynched if the device has not synched with Posiverse since new Settings were specified.",
     )
-    # OpenAPI types this as string; live TEST returns an object (often {}).
-    errors: Optional[Union[str, dict, list, Any]] = Field(None)
+    errors: Optional[dict[str, Any]] = Field(
+        None, description="Any errors reported during settings sync"
+    )
     synchDate: Optional[int] = Field(
         None,
         description="Date the SettingsSynched were last synchronized with device, in UTC millis since 1970-01-01",

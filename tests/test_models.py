@@ -6,13 +6,18 @@ import pytest
 from pydantic import ValidationError
 
 from posiverse.models import (
+    ConsoleLine,
     Device,
     DeviceLog,
+    DevicePut,
     Error,
     SettingsData,
+    SettingsSynched,
     TagMapPut,
     TagPut,
     TelemetryLog,
+    User,
+    UserLog,
 )
 
 
@@ -33,12 +38,14 @@ def test_device_nested_full_payload():
 
 
 def test_telemetry_json_alias():
-    """OpenAPI field ``json`` maps to ``json_`` on TelemetryLog."""
-    log = TelemetryLog.model_validate({"imei": "1", "json": '{"x":1}'})
-    assert log.json_ == '{"x":1}'
+    """OpenAPI field ``json`` maps to ``json_`` on TelemetryLog and is an object."""
+    log = TelemetryLog.model_validate({"imei": "1", "json": {"x": 1}})
+    assert log.json_ == {"x": 1}
     dumped = log.model_dump(by_alias=True)
-    assert dumped["json"] == '{"x":1}'
+    assert dumped["json"] == {"x": 1}
     assert "json_" not in dumped
+    with pytest.raises(ValidationError):
+        TelemetryLog.model_validate({"json": '{"x":1}'})
 
 
 def test_tag_put_requires_name():
@@ -63,19 +70,17 @@ def test_error_schema_required_fields():
     assert err.code == 404
 
 
-def test_device_log_result_and_request_accept_string_object_or_null():
-    """OpenAPI says string; live GET /devicelogs may return an object or null.
-
-    ``result`` is the field the live suite rejected. ``request`` uses the
-    same OpenAPI type, so it accepts the same shapes.
-    """
+def test_device_log_result_and_request_are_objects():
+    """OpenAPI types request and result as objects (or null when omitted)."""
     as_object = DeviceLog.model_validate(
         {
             "deviceId": "d1",
+            "database": "db-1",
             "request": {"imei": "123", "ts": 1, "rpt": {"b": 2, "a": 1}},
             "result": {"ok": True, "n": 2, "nested": {"k": "v"}},
         }
     )
+    assert as_object.database == "db-1"
     assert as_object.request == {"imei": "123", "ts": 1, "rpt": {"b": 2, "a": 1}}
     assert as_object.result == {"ok": True, "n": 2, "nested": {"k": "v"}}
     assert as_object.model_dump()["result"] == {"ok": True, "n": 2, "nested": {"k": "v"}}
@@ -84,9 +89,8 @@ def test_device_log_result_and_request_accept_string_object_or_null():
     assert empty_object.result == {}
     assert empty_object.request == {}
 
-    as_string = DeviceLog.model_validate({"request": '{"ts":1}', "result": "diagnostic"})
-    assert as_string.request == '{"ts":1}'
-    assert as_string.result == "diagnostic"
+    with pytest.raises(ValidationError):
+        DeviceLog.model_validate({"request": '{"ts":1}', "result": "diagnostic"})
 
     as_null = DeviceLog.model_validate({"request": None, "result": None})
     assert as_null.request is None
@@ -95,6 +99,43 @@ def test_device_log_result_and_request_accept_string_object_or_null():
     omitted = DeviceLog.model_validate({"deviceId": "d1"})
     assert omitted.request is None
     assert omitted.result is None
+
+
+def test_user_log_and_user_language_match_spec():
+    """User.language and UserLog.database/request/result follow the OpenAPI names."""
+    user = User.model_validate({"id": "u1", "language": "en"})
+    assert user.language == "en"
+    log = UserLog.model_validate(
+        {"userId": "u1", "database": "db", "request": {"a": 1}, "result": {}}
+    )
+    assert log.database == "db"
+    assert log.request == {"a": 1}
+    with pytest.raises(ValidationError):
+        UserLog.model_validate({"request": "not-an-object"})
+
+
+def test_device_vcm_and_settings_synched_fields():
+    """Device VCM fields and SettingsSynched.ver match the OpenAPI names."""
+    device = Device.model_validate(
+        {
+            "id": "d1",
+            "isVcmStatic": True,
+            "vcmProtocolId": "p1",
+            "vcmProtocolId2": "p2",
+            "vcmVehicleId": "v1",
+        }
+    )
+    assert device.isVcmStatic is True
+    assert device.vcmProtocolId2 == "p2"
+    body = DevicePut(isVcmStatic=False, vcmProtocol2Id="p2")
+    dumped = body.model_dump(exclude_none=True)
+    assert dumped["vcmProtocol2Id"] == "p2"
+    assert "vcmProtocolId2" not in dumped
+    synched = SettingsSynched.model_validate({"ver": 3, "errors": {"field": "bad"}})
+    assert synched.ver == 3
+    assert synched.errors == {"field": "bad"}
+    line = ConsoleLine.model_validate({"date": 1, "idx": 2, "data": "ok"})
+    assert line.idx == 2
 
 
 def test_settings_data_extra_fields_allowed():

@@ -7,7 +7,8 @@ JSON body. The OpenAPI documents four headers:
 * ``x-page-count``: objects in the current response (always returned)
 * ``x-page-start``: zero-based offset of this page (always returned)
 * ``x-next-page-url``: partial URL of the next page; prepend the client
-  base URL. Absent when no further pages exist.
+  base URL. Absent when no further pages exist. Operation ``getNextPage``
+  (``GET /pages/{pageId}``) is the cursor endpoint that partial URL points at.
 """
 
 from __future__ import annotations

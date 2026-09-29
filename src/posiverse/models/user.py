@@ -26,7 +26,7 @@ class User(PosiverseModel):
         None,
         description="The date the user entered its current state, in UTC millis from 1970-01-01",
     )
-    language_id: Optional[str] = Field(
+    language: Optional[str] = Field(
         None,
         description='Current language assigned to user, one of ("en", "es") where en = English and es = Spanish',
     )
@@ -46,7 +46,7 @@ class User(PosiverseModel):
 
 
 class UserPut(PosiverseModel):
-    """The data record containing fields that can be modified on a group"""
+    """The data record containing fields that can be modified on a user"""
 
     name: Optional[str] = Field(None, description="Short name for user")
     description: Optional[str] = Field(None, description="Area to keep notes on user")
