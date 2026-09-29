@@ -2,7 +2,7 @@
 
 Python SDK for the [Posiverse](https://www.positioninguniversal.com) OpenAPI (v1.1.1).
 
-Built with **httpx** and **pydantic v2**. Requires Python 3.10 or newer. Covers all OpenAPI tags: Commands, Devices, Firmwares, Groups, Logs, Products, Settings, TagMaps, Tags, Tenants, Users, VirtualConsole.
+Built with **httpx** and **pydantic v2**. Requires Python 3.10 or newer. Covers the OpenAPI tags: Commands, Devices, Firmwares, Groups, Logs, Products, Settings, TagMaps, Tags, Tenants, Users, VirtualConsole, plus `GET /pages/{pageId}` (operation tag Pagination).
 
 The OpenAPI document checked into this repository (`openapi/posiverse.openapi.json`) is the source of truth. The SDK does not invent endpoints beyond that spec.
 
@@ -147,13 +147,15 @@ List endpoints return a `PaginatedResponse` with items plus headers:
 - `x-page-start` → `page_start`
 - `x-next-page-url` → `next_page_url` (partial URL; prepend the server base URL)
 
-Walk pages with `client.follow_next_page(page, item_model)` or `client.iter_pages(...)`.
+Walk pages with `client.follow_next_page(page, item_model)` or `client.iter_pages(...)`. When `x-next-page-url` is a `/pages/{pageId}` cursor, you can also call `client.pages.get(page_id, item_model=...)` (`GET /pages/{pageId}`, operation `getNextPage`). The response is an array of objects plus the same pagination headers; pass the model from the original list.
 
 ### Logs
 
-`client.logs.list_device` calls `GET /devicelogs` (operation `getDeviceLogs`). Pass `service_ids` and `actions` to filter (`serviceIds` and `actions` on the query string). Provide exactly one of `imeis` or `device_ids`. Each call returns one page. Walk further pages with `client.follow_next_page(page, DeviceLog)` or `client.iter_pages(...)`.
+`client.logs.list_device` calls `GET /devicelogs` (operation `getDeviceLogs`). Pass `service_ids` and `actions` to filter (`serviceIds` and `actions` on the query string). Optional filters include `database_ids`, `min_log_level` (`debug`, `info`, `warn`, `error`), and `min_duration` (milliseconds). Provide at most one of `imeis` or `device_ids` (the OpenAPI marks both optional and says only one may be sent). `start_millis` is optional UTC milliseconds (server default: 10 minutes ago), limited to the past 365 days, and the window may not span more than 30 days. `limit` defaults to 1000 on the server. Each call returns one page. Walk further pages with `client.follow_next_page(page, DeviceLog)`, `client.pages.get`, or `client.iter_pages(...)`.
 
-`client.logs.list_telemetry` calls `GET /telemetrylogs`. `client.logs.list_user` calls `GET /userlogs`. Both take `start_millis` and an optional `limit`. Telemetry search can filter by `imeis`; user search can filter by `user_ids`, `service_ids`, and `actions`.
+`client.logs.list_telemetry` calls `GET /telemetrylogs`. `start_millis` is optional UTC milliseconds (server default: 4 hours ago). `limit` defaults to 1000 and cannot exceed 5000. Telemetry search can filter by `imeis`.
+
+`client.logs.list_user` calls `GET /userlogs`. `start_millis` is optional UTC milliseconds (server default: 10 minutes ago), with the same 365-day lookback and 30-day window as device logs. User search can filter by `user_ids`, `database_ids`, `service_ids`, `actions`, `min_log_level`, and `min_duration`.
 
 ```python
 page = client.logs.list_device(
@@ -161,6 +163,7 @@ page = client.logs.list_device(
     imeis="123456789012345",
     service_ids=["config"],
     actions=["logs"],
+    min_log_level="info",
     limit=100,
 )
 ```
@@ -181,17 +184,18 @@ page = client.logs.list_device(
 | Attribute | Tag | Operations |
 |-----------|-----|------------|
 | `client.commands` | Commands | list / add / delete |
-| `client.devices` | Devices | list / get / update, plus properties, scratchpad, settings synched |
+| `client.devices` | Devices | list (`tag_id` optional) / get / update, plus properties, scratchpad, `delete_scratchpad_keys`, settings synched |
 | `client.firmwares` | Firmwares | list / get |
 | `client.groups` | Groups | list / get / update |
 | `client.logs` | Logs | `list_device` / `list_telemetry` / `list_user` |
+| `client.pages` | Pagination | `get` (`GET /pages/{pageId}`) |
 | `client.products` | Products | list / get |
-| `client.settings` | Settings | get / update |
+| `client.settings` | Settings | get / update (owner is a device or group UUID) |
 | `client.tagmaps` | TagMaps | list / get / create / update / delete |
 | `client.tags` | Tags | list / get / create / update / delete |
 | `client.tenants` | Tenants | list / get / update |
 | `client.users` | Users | list / get / update |
-| `client.virtual_console` | VirtualConsole | `get_output` / `send` |
+| `client.virtual_console` | VirtualConsole | `get_output(device_id, last_date=, last_idx=)` / `send` (text/plain body) |
 
 ## Versioning
 

@@ -3,20 +3,22 @@
 from __future__ import annotations
 
 import httpx
+import pytest
+from pydantic import ValidationError
 
 
-def test_list_device_validates_object_and_string_result(mock_api, client):
-    """GET /devicelogs accepts object result payloads and string results."""
+def test_list_device_validates_object_result(mock_api, client):
+    """GET /devicelogs accepts object request/result payloads and null."""
     mock_api.get("/devicelogs").mock(
         return_value=httpx.Response(
             200,
             json=[
                 {
                     "deviceId": "d1",
+                    "database": "db-1",
                     "request": {"cmd": "ping"},
                     "result": {"status": "ok"},
                 },
-                {"deviceId": "d2", "request": "raw", "result": "ok"},
                 {"deviceId": "d3", "request": None, "result": None},
             ],
         )
@@ -24,10 +26,21 @@ def test_list_device_validates_object_and_string_result(mock_api, client):
     page = client.logs.list_device(start_millis=1, device_ids="d1")
     assert page.items[0].result == {"status": "ok"}
     assert page.items[0].request == {"cmd": "ping"}
-    assert page.items[1].result == "ok"
-    assert page.items[1].request == "raw"
-    assert page.items[2].result is None
-    assert page.items[2].request is None
+    assert page.items[0].database == "db-1"
+    assert page.items[1].result is None
+    assert page.items[1].request is None
+
+
+def test_list_device_rejects_string_result(mock_api, client):
+    """OpenAPI types request and result as objects, so a string fails validation."""
+    mock_api.get("/devicelogs").mock(
+        return_value=httpx.Response(
+            200,
+            json=[{"deviceId": "d2", "request": "raw", "result": "ok"}],
+        )
+    )
+    with pytest.raises(ValidationError):
+        client.logs.list_device(device_ids="d2")
 
 
 def test_list_device_sends_service_ids_and_actions(mock_api, client):
@@ -43,7 +56,7 @@ def test_list_device_sends_service_ids_and_actions(mock_api, client):
         assert request.url.params.get("limit") == "5"
         return httpx.Response(
             200,
-            json=[{"deviceId": "d1", "service": "config", "action": "logs", "request": "{}"}],
+            json=[{"deviceId": "d1", "service": "config", "action": "logs", "request": {}}],
         )
 
     mock_api.get("/devicelogs").mock(side_effect=respond)

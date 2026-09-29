@@ -34,6 +34,7 @@ from posiverse.resources.devices import DevicesResource
 from posiverse.resources.firmwares import FirmwaresResource
 from posiverse.resources.groups import GroupsResource
 from posiverse.resources.logs import LogsResource
+from posiverse.resources.pages import PagesResource
 from posiverse.resources.products import ProductsResource
 from posiverse.resources.settings import SettingsResource
 from posiverse.resources.tagmaps import TagMapsResource
@@ -74,8 +75,9 @@ class PosiverseClient:
     """Synchronous Posiverse OpenAPI client.
 
     Resource namespaces match OpenAPI tags: ``commands``, ``devices``,
-    ``firmwares``, ``groups``, ``logs``, ``products``, ``settings``,
-    ``tagmaps``, ``tags``, ``tenants``, ``users``, ``virtual_console``.
+    ``firmwares``, ``groups``, ``logs``, ``pages``, ``products``,
+    ``settings``, ``tagmaps``, ``tags``, ``tenants``, ``users``,
+    ``virtual_console``.
 
     Args:
         api_key: Posiverse API key sent as the ``posiverse-auth-key`` header.
@@ -151,6 +153,7 @@ class PosiverseClient:
         self.firmwares = FirmwaresResource(self)
         self.groups = GroupsResource(self)
         self.logs = LogsResource(self)
+        self.pages = PagesResource(self)
         self.products = ProductsResource(self)
         self.settings = SettingsResource(self)
         self.tagmaps = TagMapsResource(self)
@@ -350,8 +353,9 @@ class PosiverseClient:
         """Fetch the next page using ``x-next-page-url`` when present.
 
         The OpenAPI documents ``x-next-page-url`` as a *partial* URL that
-        must be prefixed with the original server URL. Absolute URLs are
-        passed through unchanged.
+        must be prefixed with the original server URL. That partial URL is
+        often ``/pages/{pageId}`` (operation ``getNextPage``, also available
+        as ``client.pages.get``). Absolute URLs are passed through unchanged.
 
         Args:
             page: A previously returned :class:`PaginatedResponse`.

@@ -27,6 +27,7 @@ OPERATION_MAP = {
     "getProduct": ("products", "get"),
     "getProperties": ("devices", "get_properties"),
     "getScratchpad": ("devices", "get_scratchpad"),
+    "deleteScratchpadKeys": ("devices", "delete_scratchpad_keys"),
     "getSettings": ("settings", "get"),
     "modifySettings": ("settings", "update"),
     "getSettingsSynched": ("devices", "get_settings_synched"),
@@ -51,6 +52,7 @@ OPERATION_MAP = {
     "getDeviceLogs": ("logs", "list_device"),
     "getTelemetryLogs": ("logs", "list_telemetry"),
     "getUserLogs": ("logs", "list_user"),
+    "getNextPage": ("pages", "get"),
 }
 
 
@@ -93,6 +95,23 @@ def test_every_operation_id_is_mapped(client: PosiverseClient):
         assert callable(getattr(resource, method_name))
 
 
+def test_spec_paths_include_pages_scratchpad_delete_and_console_cursor():
+    """New owner paths are present and the old console GET path is gone."""
+    spec = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
+    assert "/pages/{pageId}" in spec["paths"]
+    assert "/virtualconsole/{deviceId}/{lastDate}/{lastIdx}" in spec["paths"]
+    console = spec["paths"]["/virtualconsole/{deviceId}"]
+    assert "get" not in console
+    assert "put" in console
+    assert "delete" in spec["paths"]["/scratchpads/{deviceId}"]
+    device_log = spec["components"]["schemas"]["DeviceLog"]["properties"]
+    assert "database" in device_log
+    assert "databaseId" not in device_log
+    user = spec["components"]["schemas"]["User"]["properties"]
+    assert "language" in user
+    assert "language_id" not in user
+
+
 def test_required_tags_are_on_client(client: PosiverseClient):
     """Client exposes a namespace for each functional OpenAPI tag."""
     for name in (
@@ -101,6 +120,7 @@ def test_required_tags_are_on_client(client: PosiverseClient):
         "firmwares",
         "groups",
         "logs",
+        "pages",
         "products",
         "settings",
         "tagmaps",

@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from posiverse.models import DevicePut, SettingsPut, TagMapPut, TagPut
+from posiverse.models import Device, DevicePut, SettingsPut, TagMapPut, TagPut
 
 
 def test_commands_list_add_delete(mock_api, client):
@@ -37,10 +37,14 @@ def test_devices_list_get_update_nested(mock_api, client):
             headers={"x-total-count": "1"},
         )
     )
-    page = client.devices.list(group_id="g1", imei="123", full=True, tenant_id="t1")
+    page = client.devices.list(
+        group_id="g1", tag_id="tg1", imei="123", full=True, tenant_id="t1"
+    )
     assert page.items[0].imei == "123"
-    assert "groupId=g1" in str(mock_api.calls.last.request.url)
-    assert "full=true" in str(mock_api.calls.last.request.url)
+    url = str(mock_api.calls.last.request.url)
+    assert "groupId=g1" in url
+    assert "tagId=tg1" in url
+    assert "full=true" in url
 
     mock_api.get("/devices/d1").mock(
         return_value=httpx.Response(200, json={"id": "d1", "name": "Truck"})
@@ -67,10 +71,16 @@ def test_devices_list_get_update_nested(mock_api, client):
     assert pad.totalFuel == 10
 
     mock_api.get("/settingssynched/d1").mock(
-        return_value=httpx.Response(200, json={"version": 2, "data": {"ver": 1}})
+        return_value=httpx.Response(200, json={"ver": 2, "errors": {}, "data": {"ver": 1}})
     )
     synched = client.devices.get_settings_synched("d1")
-    assert synched.version == 2
+    assert synched.ver == 2
+    assert synched.errors == {}
+
+    deleted = mock_api.delete("/scratchpads/d1").mock(return_value=httpx.Response(200))
+    client.devices.delete_scratchpad_keys("d1", ["engineHrs"])
+    assert deleted.calls.last.request.headers["content-type"].startswith("application/json")
+    assert deleted.calls.last.request.content == b'["engineHrs"]'
 
 
 def test_firmwares_and_products(mock_api, client):
@@ -184,22 +194,32 @@ def test_logs_device_telemetry_user(mock_api, client):
     mock_api.get("/devicelogs").mock(
         return_value=httpx.Response(200, json=[{"deviceId": "d1", "imei": "123"}])
     )
-    page = client.logs.list_device(start_millis=1, imeis="123")
+    page = client.logs.list_device(
+        start_millis=1,
+        imeis="123",
+        database_ids="db1",
+        min_log_level="info",
+        min_duration=5,
+    )
     assert page.items[0].imei == "123"
     url = str(mock_api.calls.last.request.url)
     assert "imeis=123" in url
     assert "startMillis=1" in url
+    assert "databaseIds=db1" in url
+    assert "minLogLevel=info" in url
+    assert "minDuration=5" in url
 
-    with pytest.raises(ValueError, match="exactly one"):
-        client.logs.list_device(start_millis=1)
-    with pytest.raises(ValueError, match="exactly one"):
+    client.logs.list_device()
+    assert "startMillis" not in str(mock_api.calls.last.request.url)
+
+    with pytest.raises(ValueError, match="at most one"):
         client.logs.list_device(start_millis=1, imeis="1", device_ids="d1")
 
     mock_api.get("/telemetrylogs").mock(
-        return_value=httpx.Response(200, json=[{"imei": "123", "json": '{"a":1}'}])
+        return_value=httpx.Response(200, json=[{"imei": "123", "json": {"a": 1}}])
     )
     tel = client.logs.list_telemetry(start_millis=1, imeis=["123"])
-    assert tel.items[0].json_ == '{"a":1}'
+    assert tel.items[0].json_ == {"a": 1}
 
     mock_api.get("/userlogs").mock(
         return_value=httpx.Response(200, json=[{"userId": "u1", "action": "login"}])
@@ -209,14 +229,31 @@ def test_logs_device_telemetry_user(mock_api, client):
 
 
 def test_virtual_console(mock_api, client):
-    """VirtualConsole GET output and PUT command query param."""
-    mock_api.get("/virtualconsole/d1").mock(
+    """VirtualConsole GET output by path and PUT text/plain body."""
+    mock_api.get("/virtualconsole/d1/0/0").mock(
         return_value=httpx.Response(200, json=[{"date": 0, "idx": 1, "data": "ok"}])
     )
-    lines = client.virtual_console.get_output("d1", last_date=0)
+    lines = client.virtual_console.get_output("d1", last_date=0, last_idx=0)
     assert lines[0].data == "ok"
-    assert "lastDate=0" in str(mock_api.calls.last.request.url)
+    assert str(mock_api.calls.last.request.url).endswith("/virtualconsole/d1/0/0")
 
     put = mock_api.put("/virtualconsole/d1").mock(return_value=httpx.Response(200))
     client.virtual_console.send("d1", "ati")
-    assert "command=ati" in str(put.calls.last.request.url)
+    assert put.calls.last.request.headers["content-type"].startswith("text/plain")
+    assert put.calls.last.request.content == b"ati"
+    assert "command=" not in str(put.calls.last.request.url)
+
+
+def test_pages_get(mock_api, client):
+    """GET /pages/{pageId} validates items and pagination headers."""
+    mock_api.get("/pages/cursor-1").mock(
+        return_value=httpx.Response(
+            200,
+            json=[{"id": "d2", "name": "Two"}],
+            headers={"x-total-count": "2", "x-page-count": "1", "x-page-start": "1"},
+        )
+    )
+    page = client.pages.get("cursor-1", item_model=Device)
+    assert page.items[0].id == "d2"
+    assert page.total_count == 2
+    assert page.page_start == 1

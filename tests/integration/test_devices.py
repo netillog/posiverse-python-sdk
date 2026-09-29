@@ -71,8 +71,17 @@ def test_devices_get_settings_synched(api, known_device_id):
     """
     synched = api.devices.get_settings_synched(known_device_id)
     assert synched is not None
-    # Live returns ``ver``; OpenAPI documents ``version``.
-    assert synched.ver is not None or synched.version is not None or synched.data is not None
+    assert synched.ver is not None or synched.data is not None
+
+
+def test_devices_delete_scratchpad_blocked():
+    """DELETE /scratchpads/{deviceId} — skipped (removes scratchpad keys).
+
+    Raises:
+        pytest.skip.Exception: Always; deleting scratchpad keys mutates the
+            shared TEST device.
+    """
+    pytest.skip("blocked: deleteScratchpadKeys mutates the shared TEST device scratchpad")
 
 
 def test_devices_update_blocked():

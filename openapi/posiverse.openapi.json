@@ -212,6 +212,15 @@
             "required": false
           },
           {
+            "name": "tagId",
+            "description": "Search for all devices associated with a specific tag using its UUID",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false
+          },
+          {
             "name": "imei",
             "description": "Search for a device by its IMEI",
             "schema": {
@@ -481,17 +490,7 @@
         "operationId": "getFirmwares",
         "summary": "/firmwares",
         "description": "List all firmwares for user's default tenant, unless the query parameter tenantId is used to override."
-      },
-      "parameters": [
-        {
-          "name": "tenantId",
-          "description": "If needed specify an alternate tenant by its UUID.  If left out then default tenant for account is used.  User must have permissions for specified tenant.",
-          "schema": {
-            "type": "string"
-          },
-          "in": "query"
-        }
-      ]
+      }
     },
     "/firmwares/{firmwareId}": {
       "get": {
@@ -959,6 +958,64 @@
         "operationId": "getScratchpad",
         "summary": "/scratchpads/{deviceId}",
         "description": "Get a specific device's scratchpad by its UUID.  The scratchpad is used by the device to store data in the cloud.  Each firmware could store different values so there is no standard result json."
+      },
+      "delete": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Array of keys to remove from scratchpad"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Devices"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "description": "UUID of device",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/Throttled"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "operationId": "deleteScratchpadKeys",
+        "summary": "/scratchpads/{deviceId}",
+        "description": "Remove keys from a device scratchpad"
       }
     },
     "/settings/{ownerId}": {
@@ -1028,7 +1085,7 @@
         "parameters": [
           {
             "name": "ownerId",
-            "description": "UUID of device",
+            "description": "UUID of owner, either group or device",
             "schema": {
               "type": "string"
             },
@@ -1300,7 +1357,65 @@
       }
     },
     "/virtualconsole/{deviceId}": {
-      "description": "User virtual console to dynamically interact with device as if you are connected to its RS-232 console port.  The device must be connected to Posiverse configuration endpoint for virtual console to work.",
+      "description": "Use virtual console to dynamically interact with device as if you are connected to its RS-232 console port.  The device must be connected to Posiverse configuration endpoint for virtual console to work.",
+      "put": {
+        "tags": [
+          "VirtualConsole"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "description": "UUID of device",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string",
+                "description": "The command string to send to the device console"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/Throttled"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "operationId": "addCommandToConsole",
+        "summary": "/virtualconsole/{deviceId}",
+        "description": "Write a command to device virtual console"
+      }
+    },
+    "/virtualconsole/{deviceId}/{lastDate}/{lastIdx}": {
+      "description": "Retrieve console lines emitted by the device starting from specified lastDate timestamp and lastIdx line index.",
       "get": {
         "tags": [
           "VirtualConsole"
@@ -1317,11 +1432,22 @@
           },
           {
             "name": "lastDate",
-            "description": "Date of last received virtual console output, use 0 to get all stored console output",
+            "description": "Timestamp of last received virtual console output in UTC millis (use 0 to get all stored output)",
             "schema": {
+              "format": "int64",
               "type": "integer"
             },
-            "in": "query",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "lastIdx",
+            "description": "Index of last received console line (use 0 to get from beginning)",
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "in": "path",
             "required": true
           }
         ],
@@ -1361,61 +1487,8 @@
           }
         ],
         "operationId": "getConsoleOutput",
-        "summary": "/virtualconsole/{deviceId}",
-        "description": "Get any received console lines from specified lastDate"
-      },
-      "put": {
-        "tags": [
-          "VirtualConsole"
-        ],
-        "parameters": [
-          {
-            "name": "deviceId",
-            "description": "UUID of device",
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "required": true
-          },
-          {
-            "name": "command",
-            "description": "The actual command string to execute on the device",
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/Success"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/Throttled"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "operationId": "addCommandToConsole",
-        "summary": "/virtualconsole/{deviceId}",
-        "description": "Write a command to device virtual console"
+        "summary": "/virtualconsole/{deviceId}/{lastDate}/{lastIdx}",
+        "description": "Get received console lines starting from specified lastDate and lastIdx"
       }
     },
     "/tenants": {
@@ -2277,7 +2350,7 @@
               }
             },
             "in": "query",
-            "required": true
+            "required": false
           },
           {
             "name": "deviceIds",
@@ -2289,7 +2362,19 @@
               }
             },
             "in": "query",
-            "required": true
+            "required": false
+          },
+          {
+            "name": "databaseIds",
+            "description": "Specify array of database UUIDs to filter logs by",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "in": "query",
+            "required": false
           },
           {
             "name": "serviceIds",
@@ -2316,18 +2401,45 @@
             "required": false
           },
           {
-            "name": "startMillis",
-            "description": "UTC seconds since 1970-01-01 to start search from. Limited to the past 40 days.",
+            "name": "minLogLevel",
+            "description": "Filter logs by minimum log level",
             "schema": {
+              "type": "string",
+              "enum": [
+                "debug",
+                "info",
+                "warn",
+                "error"
+              ]
+            },
+            "in": "query",
+            "required": false
+          },
+          {
+            "name": "minDuration",
+            "description": "Minimum execution duration in milliseconds",
+            "schema": {
+              "format": "int64",
               "type": "integer"
             },
             "in": "query",
-            "required": true
+            "required": false
+          },
+          {
+            "name": "startMillis",
+            "description": "UTC millis since 1970-01-01 to start search from (defaults to 10 minutes ago). Limited to the past 365 days. Queries may not span more than 30 days.",
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "in": "query",
+            "required": false
           },
           {
             "name": "endMillis",
-            "description": "UTC seconds since 1970-01-01 to end search, if not specified then defaults to current time",
+            "description": "UTC millis since 1970-01-01 to end search, if not specified then defaults to current. Queries may not span more than 30 days.",
             "schema": {
+              "format": "int64",
               "type": "integer"
             },
             "in": "query",
@@ -2359,7 +2471,7 @@
           },
           {
             "name": "limit",
-            "description": "Maximum number of database logs to return, defaults to 1000 if not specified.  Cannot return more than 100,000 logs.",
+            "description": "Maximum number of device logs to return, defaults to 1000 if not specified.",
             "schema": {
               "type": "integer"
             },
@@ -2449,17 +2561,19 @@
           },
           {
             "name": "startMillis",
-            "description": "UTC seconds since 1970-01-01 to start search",
+            "description": "UTC millis since 1970-01-01 to start search from (defaults to 4 hours ago).",
             "schema": {
+              "format": "int64",
               "type": "integer"
             },
             "in": "query",
-            "required": true
+            "required": false
           },
           {
             "name": "endMillis",
-            "description": "UTC seconds since 1970-01-01 to end search, if not specified then defaults to current time",
+            "description": "UTC millis since 1970-01-01 to end search, if not specified then defaults to current.",
             "schema": {
+              "format": "int64",
               "type": "integer"
             },
             "in": "query",
@@ -2467,7 +2581,7 @@
           },
           {
             "name": "limit",
-            "description": "Maximum number of database logs to return, defaults to 1000 if not specified.  Cannot return more than 100,000 logs.",
+            "description": "Maximum number of telemetry logs to return, defaults to 1000 if not specified.  Cannot return more than 5,000 logs.",
             "schema": {
               "type": "integer"
             },
@@ -2556,6 +2670,18 @@
             "required": false
           },
           {
+            "name": "databaseIds",
+            "description": "Specify array of database UUIDs to filter logs by",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "in": "query",
+            "required": false
+          },
+          {
             "name": "serviceIds",
             "description": "specify services to include in search. value allowed are \"api\", \"open_api\"",
             "schema": {
@@ -2580,18 +2706,45 @@
             "required": false
           },
           {
-            "name": "startMillis",
-            "description": "UTC millis since 1970-01-01 to start search",
+            "name": "minLogLevel",
+            "description": "Filter logs by minimum log level",
             "schema": {
+              "type": "string",
+              "enum": [
+                "debug",
+                "info",
+                "warn",
+                "error"
+              ]
+            },
+            "in": "query",
+            "required": false
+          },
+          {
+            "name": "minDuration",
+            "description": "Minimum execution duration in milliseconds",
+            "schema": {
+              "format": "int64",
               "type": "integer"
             },
             "in": "query",
-            "required": true
+            "required": false
+          },
+          {
+            "name": "startMillis",
+            "description": "UTC millis since 1970-01-01 to start search from (defaults to 10 minutes ago). Limited to the past 365 days. Queries may not span more than 30 days.",
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "in": "query",
+            "required": false
           },
           {
             "name": "endMillis",
-            "description": "UTC millis since 1970-01-01 to end search, if not specified then defaults to current time",
+            "description": "UTC millis since 1970-01-01 to end search, if not specified then defaults to current. Queries may not span more than 30 days.",
             "schema": {
+              "format": "int64",
               "type": "integer"
             },
             "in": "query",
@@ -2623,7 +2776,7 @@
           },
           {
             "name": "limit",
-            "description": "Maximum number of database logs to return, defaults to 1000 if not specified.  Cannot return more than 100,000 logs.",
+            "description": "Maximum number of user logs to return, defaults to 1000 if not specified.",
             "schema": {
               "type": "integer"
             },
@@ -2692,6 +2845,84 @@
         "summary": "/userlogs",
         "description": "Get all the user logs for a specific user UUID given the applied filters"
       }
+    },
+    "/pages/{pageId}": {
+      "get": {
+        "tags": [
+          "Pagination"
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "description": "Unique token identifier for the next page of results",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "headers": {
+              "x-total-count": {
+                "schema": {
+                  "format": "int32",
+                  "type": "integer"
+                }
+              },
+              "x-page-count": {
+                "schema": {
+                  "format": "int32",
+                  "type": "integer"
+                }
+              },
+              "x-page-start": {
+                "schema": {
+                  "format": "int32",
+                  "type": "integer"
+                }
+              },
+              "x-next-page-url": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/Throttled"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "operationId": "getNextPage",
+        "summary": "/pages/{pageId}",
+        "description": "Retrieve the next page of results using a cursor page token from x-next-page-url"
+      }
     }
   },
   "components": {
@@ -2739,16 +2970,17 @@
         }
       },
       "ConsoleLine": {
-        "description": "A command that can be queued against a device and will get executed when device is connected to network",
+        "description": "An output line emitted by a device's virtual console",
         "type": "object",
         "properties": {
           "date": {
-            "description": "Date the device printed console line in UTC seconds since 1970-01-01",
+            "format": "int64",
+            "description": "Date the device printed console line in UTC millis since 1970-01-01",
             "type": "integer"
           },
           "idx": {
             "format": "int64",
-            "description": "Unique integer for each command.  Incremented by 1 for each new line.",
+            "description": "Unique integer for each console line. Incremented by 1 for each new line.",
             "type": "integer"
           },
           "data": {
@@ -2905,7 +3137,7 @@
             "description": "The date the user entered its current state, in UTC millis from 1970-01-01",
             "type": "integer"
           },
-          "language_id": {
+          "language": {
             "description": "Current language assigned to user, one of (\"en\", \"es\") where en = English and es = Spanish",
             "type": "string"
           },
@@ -2955,17 +3187,17 @@
             "description": "A short name for the type of user request",
             "type": "string"
           },
-          "databaseId": {
-            "description": "A UUID that groups all database changes taken by a specific user action.  For example: changing a group's settings will cause the settings database record for each device in the group to change.  Each of these database records will have the same databaseId that can be looked up with database log search.",
+          "database": {
+            "description": "A UUID that groups all database changes taken by a specific user action.  For example: changing a group's settings will cause the settings database record for each device in the group to change.  Each of these database records will have the same database UUID that can be looked up with database log search.",
             "type": "string"
           },
           "request": {
             "description": "The incoming JSON object representing the user's request to the system",
-            "type": "string"
+            "type": "object"
           },
           "result": {
             "description": "The result of the request from the user in JSON",
-            "type": "string"
+            "type": "object"
           },
           "logs": {
             "description": "Specific logs from the handling of the user action",
@@ -2986,17 +3218,17 @@
           },
           "date": {
             "format": "int64",
-            "description": "The date the log was created on device",
+            "description": "The date the log was created on device, in UTC millis since 1970-01-01",
             "type": "integer"
           },
           "serverDate": {
             "format": "int64",
-            "description": "The date the log was processed on server",
+            "description": "The date the log was processed on server, in UTC millis since 1970-01-01",
             "type": "integer"
           },
           "json": {
             "description": "Raw JSON data associated with Log",
-            "type": "string"
+            "type": "object"
           }
         }
       },
@@ -3197,6 +3429,22 @@
             "description": "Current reported version of VCM module firmware on device",
             "type": "string"
           },
+          "isVcmStatic": {
+            "description": "Whether VCM is statically assigned",
+            "type": "boolean"
+          },
+          "vcmProtocolId": {
+            "description": "UUID of primary VCM protocol",
+            "type": "string"
+          },
+          "vcmProtocolId2": {
+            "description": "UUID of secondary VCM protocol",
+            "type": "string"
+          },
+          "vcmVehicleId": {
+            "description": "UUID of VCM vehicle configuration",
+            "type": "string"
+          },
           "scratchpad": {
             "$ref": "#/components/schemas/Scratchpad",
             "description": "The latest scratchpad reported for a device, only returned when full version of device is requested",
@@ -3258,17 +3506,17 @@
             "description": "A short name for the action that caused the log to be created",
             "type": "string"
           },
-          "databaseId": {
+          "database": {
             "description": "A UUID that groups all database changes taken by a specific device action.  For example: a device that changes its VIN will cause change in device properties and potentially the device's settings and device's field vcmVehicleLibVer.",
             "type": "string"
           },
           "request": {
             "description": "The incoming JSON object representing the request to the system",
-            "type": "string"
+            "type": "object"
           },
           "result": {
             "description": "The result of the request in JSON",
-            "type": "string"
+            "type": "object"
           },
           "logs": {
             "description": "Specific logs from the handling of the action",
@@ -3319,7 +3567,7 @@
         "description": "The actual settings on a device",
         "type": "object",
         "properties": {
-          "version": {
+          "ver": {
             "format": "int64",
             "description": "The version of the settings that have been synched",
             "type": "integer"
@@ -3329,7 +3577,8 @@
             "description": "The actual settings synched from device.  There may be a difference between Settings specified for a device and the SettingsSynched if the device has not synched with Posiverse since new Settings were specified."
           },
           "errors": {
-            "type": "string"
+            "description": "Any errors reported during settings sync",
+            "type": "object"
           },
           "synchDate": {
             "format": "int64",
@@ -3523,11 +3772,27 @@
           "externalDeviceId": {
             "description": "An external device ID. This field is limited to 64 characters.",
             "type": "string"
+          },
+          "isVcmStatic": {
+            "description": "Whether VCM is statically assigned",
+            "type": "boolean"
+          },
+          "vcmProtocolId": {
+            "description": "UUID of primary VCM protocol",
+            "type": "string"
+          },
+          "vcmProtocol2Id": {
+            "description": "UUID of secondary VCM protocol",
+            "type": "string"
+          },
+          "vcmVehicleId": {
+            "description": "UUID of VCM vehicle configuration",
+            "type": "string"
           }
         }
       },
       "UserPut": {
-        "description": "The data record containing fields that can be modified on a group",
+        "description": "The data record containing fields that can be modified on a user",
         "type": "object",
         "properties": {
           "name": {

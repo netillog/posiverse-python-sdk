@@ -5,6 +5,7 @@ from posiverse.resources.devices import DevicesResource
 from posiverse.resources.firmwares import FirmwaresResource
 from posiverse.resources.groups import GroupsResource
 from posiverse.resources.logs import LogsResource
+from posiverse.resources.pages import PagesResource
 from posiverse.resources.products import ProductsResource
 from posiverse.resources.settings import SettingsResource
 from posiverse.resources.tagmaps import TagMapsResource
@@ -19,6 +20,7 @@ __all__ = [
     "FirmwaresResource",
     "GroupsResource",
     "LogsResource",
+    "PagesResource",
     "ProductsResource",
     "SettingsResource",
     "TagMapsResource",

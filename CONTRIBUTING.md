@@ -50,6 +50,12 @@ export POSIVERSE_BASE_URL="https://your-internal-test-openapi.example"
 
 `POSIVERSE_BASE_URL` and `PosiverseClient(base_url=...)` both require https.
 
+## OpenAPI
+
+`openapi/posiverse.openapi.json` is the checked-in OpenAPI 3.0.1 document (info version `v1.1.1`) and the source of truth for SDK methods. Each `operationId` maps to one client method. Cursor pages are `GET /pages/{pageId}` (`client.pages.get`). Virtual console reads are `GET /virtualconsole/{deviceId}/{lastDate}/{lastIdx}` (`last_date` and `last_idx`; pass `0` to start from the beginning). Virtual console writes send the command as a `text/plain` body. Device scratchpad key removal is `DELETE /scratchpads/{deviceId}` with a JSON array body (`client.devices.delete_scratchpad_keys`).
+
+Do not reintroduce `get_logs`, `get_reports`, `get_device_data`, or the helpers removed with them (`DeviceLogQueries`, `ReportIdentity`, `_collect_device_logs`). Device, telemetry, and user logs stay on `client.logs.list_device`, `list_telemetry`, and `list_user`.
+
 ## Live tests
 
 Live tests are contributor-only. They must not run in default CI and must not contact production.
