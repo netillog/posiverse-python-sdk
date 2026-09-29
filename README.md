@@ -141,7 +141,7 @@ page = client.logs.list_device(
 
 ## Versioning
 
-This package follows [Semantic Versioning](https://semver.org/). `0.1.0` is the first public PyPI release. While the major version is `0`, minor bumps may include breaking changes; patch bumps are bug fixes. `1.0.0` will mark a stable public API. See [RELEASE.md](RELEASE.md) for the publish checklist.
+This package follows [Semantic Versioning](https://semver.org/). `0.1.0` is the first public PyPI release. While the major version is `0`, minor bumps may include breaking changes; patch bumps are bug fixes. `1.0.0` will mark a stable public API. See [RELEASE.md](https://github.com/netillog/posiverse-python-sdk/blob/develop/RELEASE.md) for the publish checklist.
 
 ## Contributing
 
